@@ -39,6 +39,6 @@ class Warehouse extends Model
      */
     public function movements(): HasMany
     {
-        return $this->hasMany(Movement::class);
+        return $this->hasMany(InventoryMovement::class);
     }
 }

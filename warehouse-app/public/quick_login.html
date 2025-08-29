@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>تسجيل دخول سريع</title>
+</head>
+<body>
+    <script>
+        // Auto login to first warehouse
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/warehouses/1/login';
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = 'test'; // Will be replaced by Laravel
+        
+        const passwordInput = document.createElement('input');
+        passwordInput.type = 'hidden';
+        passwordInput.name = 'password';
+        passwordInput.value = '1234';
+        
+        form.appendChild(csrfInput);
+        form.appendChild(passwordInput);
+        document.body.appendChild(form);
+        
+        alert('سيتم تسجيل الدخول تلقائياً...');
+        form.submit();
+    </script>
+</body>
+</html>

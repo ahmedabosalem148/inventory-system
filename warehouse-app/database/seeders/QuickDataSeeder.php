@@ -32,18 +32,18 @@ class QuickDataSeeder extends Seeder
         
         // إنشاء منتجات إضافية
         $products = [
-            ['name' => 'شامبو الأطفال', 'carton_size' => 12, 'active' => true],
-            ['name' => 'معجون الأسنان', 'carton_size' => 6, 'active' => true],
-            ['name' => 'صابون اليدين', 'carton_size' => 24, 'active' => true],
-            ['name' => 'كريم الوجه', 'carton_size' => 8, 'active' => true]
+            ['name_ar' => 'شامبو الأطفال', 'carton_size' => 12, 'active' => true],
+            ['name_ar' => 'معجون الأسنان', 'carton_size' => 6, 'active' => true],
+            ['name_ar' => 'صابون اليدين', 'carton_size' => 24, 'active' => true],
+            ['name_ar' => 'كريم الوجه', 'carton_size' => 8, 'active' => true]
         ];
 
         foreach ($products as $productData) {
             $product = Product::firstOrCreate(
-                ['name' => $productData['name']], 
+                ['name_ar' => $productData['name_ar']], 
                 $productData
             );
-            echo "- تم إنشاء: {$product->name} (ID: {$product->id})\n";
+            echo "- تم إنشاء: {$product->name_ar} (ID: {$product->id})\n";
         }
 
         echo "\nإضافة مخزون تجريبي...\n";

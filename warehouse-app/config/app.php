@@ -123,4 +123,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Warehouse Manager PIN Hash
+    |--------------------------------------------------------------------------
+    |
+    | This is the hashed PIN for warehouse manager access.
+    | Default PIN: 5678 (change this in production)
+    |
+    */
+    
+    'warehouse_manager_pin_hash' => env('WAREHOUSE_MANAGER_PIN_HASH', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'),
+
 ];

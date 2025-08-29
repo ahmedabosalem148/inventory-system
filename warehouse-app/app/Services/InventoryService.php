@@ -158,7 +158,15 @@ class InventoryService
 
             // Check if enough inventory available
             if ($q > $available) {
-                throw new InvalidArgumentException("الكمية المطلوبة أكبر من المتاح. المتاح = {$available}");
+                $availableCartons = intval($available / $cartonSize);
+                $availableUnits = $available % $cartonSize;
+                
+                throw new InvalidArgumentException(
+                    "الكمية غير متاحة! " .
+                    "الكمية المطلوبة: {$q} وحدة. " .
+                    "الكمية المتاحة: {$available} وحدة " .
+                    "({$availableCartons} كرتون + {$availableUnits} وحدة منفصلة)"
+                );
             }
 
             $remaining = $q;

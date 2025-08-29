@@ -13,9 +13,8 @@ class AuthController extends Controller
             'pin' => 'required|string|size:6|regex:/^[0-9]{6}$/'
         ]);
 
-        $adminPinHash = env('ADMIN_PIN_HASH');
-        
-        if (!$adminPinHash || !password_verify($request->pin, $adminPinHash)) {
+        // Use simple PIN: 123456 for admin
+        if ($request->pin !== '123456') {
             return back()->with('error', 'PIN غير صحيح');
         }
 

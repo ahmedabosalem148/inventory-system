@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Product model for warehouse management
@@ -20,7 +20,7 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name',
+        'name_ar',
         'carton_size',
         'active'
     ];
@@ -31,6 +31,22 @@ class Product extends Model
     ];
 
     /**
+     * Get the product name (accessor for backwards compatibility)
+     */
+    public function getNameAttribute()
+    {
+        return $this->name_ar;
+    }
+
+    /**
+     * Get units per carton (accessor for backwards compatibility)
+     */
+    public function getUnitsPerCartonAttribute()
+    {
+        return $this->carton_size;
+    }
+
+    /**
      * Get warehouse inventory records for this product
      */
     public function warehouseInventory(): HasMany
@@ -39,11 +55,21 @@ class Product extends Model
     }
 
     /**
+     * Get warehouses for this product with inventory data
+     */
+    public function warehouses(): BelongsToMany
+    {
+        return $this->belongsToMany(Warehouse::class, 'warehouse_inventory')
+                    ->withPivot(['closed_cartons', 'loose_units', 'min_threshold'])
+                    ->withTimestamps();
+    }
+
+    /**
      * Get movements for this product across all warehouses
      */
     public function movements(): HasMany
     {
-        return $this->hasMany(Movement::class);
+        return $this->hasMany(InventoryMovement::class);
     }
 
     /**
@@ -52,7 +78,7 @@ class Product extends Model
     public function warehouseMovements(): HasManyThrough
     {
         return $this->hasManyThrough(
-            Movement::class,
+            InventoryMovement::class,
             WarehouseInventory::class,
             'product_id',
             'product_id',

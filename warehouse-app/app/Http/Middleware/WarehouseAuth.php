@@ -19,6 +19,9 @@ class WarehouseAuth
         $warehouseId = $request->route('warehouse');
         
         if (!$warehouseId) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => 'مخزن غير صحيح'], 400);
+            }
             return redirect('/warehouses')->with('error', 'مخزن غير صحيح');
         }
         
@@ -26,6 +29,9 @@ class WarehouseAuth
         $sessionKey = "warehouse_{$warehouseId}_auth";
         
         if (!session($sessionKey)) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => 'غير مصرح لك بالوصول لهذا المخزن'], 401);
+            }
             return redirect("/warehouses/{$warehouseId}/login")
                 ->with('error', 'يجب إدخال كلمة مرور المخزن أولاً');
         }

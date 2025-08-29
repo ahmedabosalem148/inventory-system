@@ -40,6 +40,12 @@
     <div class="table-container">
         <div class="card-header">
             <div class="card-title">جدول المخزون</div>
+            <div class="card-actions">
+                <a href="/warehouses/{{ $warehouse->id }}/products/create" class="btn btn-primary">
+                    <i class="fa fa-plus"></i>
+                    إضافة منتج جديد
+                </a>
+            </div>
         </div>
         
         <div id="inventory-container">
@@ -132,8 +138,7 @@ function renderInventoryTable(inventory) {
                 <tr>
                     <th>المنتج</th>
                     <th>الكراتين</th>
-                    <th>حجم الكرتونة</th>
-                    <th>قطع مفردة</th>
+                    <th>عدد الوحدات في كل كرتونة</th>
                     <th>إجمالي الوحدات</th>
                     <th>الحد الأدنى</th>
                     <th>الحالة</th>
@@ -146,7 +151,6 @@ function renderInventoryTable(inventory) {
                         <td><span data-testid="row-product">${item.product.name}</span></td>
                         <td><span data-testid="drawer-cc" class="nums">${item.closed_cartons}</span></td>
                         <td><span data-testid="drawer-size" class="nums">${item.carton_size || 1}</span></td>
-                        <td><span data-testid="drawer-lu" class="nums">${item.loose_units}</span></td>
                         <td><span data-testid="drawer-total" class="nums">${App.formatNumber(item.totalUnits)}</span></td>
                         <td><span data-testid="drawer-min" class="nums">${App.formatNumber(item.min_threshold)}</span></td>
                         <td>
@@ -160,6 +164,7 @@ function renderInventoryTable(inventory) {
                                 <button class="btn btn-success btn-sm" onclick="openDrawer('add', ${item.product.id}, '${item.product.name}')" data-testid="btn-details">إضافة</button>
                                 <button class="btn btn-danger btn-sm" onclick="openDrawer('withdraw', ${item.product.id}, '${item.product.name}')">سحب</button>
                                 <button class="btn btn-primary btn-sm" onclick="openDrawer('setMin', ${item.product.id}, '${item.product.name}')">تعديل الحد الأدنى</button>
+                                <button class="btn btn-warning btn-sm" onclick="confirmDeleteProduct(${item.product.id}, '${item.product.name}')">حذف المنتج</button>
                             </div>
                         </td>
                     </tr>
@@ -281,10 +286,18 @@ async function handleFormSubmit(e) {
                 break;
         }
         
+        console.log('API Request:', {
+            endpoint: endpoint,
+            method: method,
+            body: body
+        });
+        
         const result = await App.fetchJSON(endpoint, {
             method: method,
             body: JSON.stringify(body)
         });
+        
+        console.log('API Response:', result);
         
         if (result.ok) {
             App.toast(result.data.message || 'تم تنفيذ العملية بنجاح', 'success');
@@ -302,7 +315,32 @@ async function handleFormSubmit(e) {
     }
 }
 
+async function confirmDeleteProduct(productId, productName) {
+    const confirmed = confirm(`هل أنت متأكد من حذف المنتج "${productName}"؟\n\nسيتم حذف المنتج نهائياً من جميع المخازن!`);
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        const result = await App.fetchJSON(`/api/products/${productId}`, {
+            method: 'DELETE'
+        });
+        
+        if (result.ok) {
+            App.toast('تم حذف المنتج بنجاح', 'success');
+            loadInventory(); // Reload inventory table
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        App.toast(error.message, 'error');
+        console.error('Error deleting product:', error);
+    }
+}
+
 // Expose for inline onclick handlers
 window.openDrawer = openDrawer;
+window.confirmDeleteProduct = confirmDeleteProduct;
 </script>
 @endpush

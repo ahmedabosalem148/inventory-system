@@ -119,6 +119,9 @@ h4 { font-size: 1.25rem; }
     background: var(--gray-50);
     padding: var(--spacing-lg);
     border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .card-title {
@@ -126,6 +129,11 @@ h4 { font-size: 1.25rem; }
     font-weight: 600;
     color: var(--gray-700);
     margin: 0;
+}
+
+.card-actions {
+    display: flex;
+    gap: var(--spacing-sm);
 }
 
 .card-body {
@@ -709,6 +717,7 @@ h4 { font-size: 1.25rem; }
 .filter-controls {
     display: flex;
     gap: var(--spacing-sm);
+    align-items: center;
 }
 
 .filter-controls select {
@@ -717,6 +726,21 @@ h4 { font-size: 1.25rem; }
     border-radius: var(--border-radius);
     font-size: 0.875rem;
     background: white;
+}
+
+.checkbox-filter {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.checkbox-filter input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
 }
 
 .table-info {

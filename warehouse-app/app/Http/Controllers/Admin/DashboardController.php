@@ -62,7 +62,7 @@ class DashboardController extends Controller
             ->join('warehouses as w', 'wi.warehouse_id', '=', 'w.id')
             ->select([
                 'wi.product_id',
-                'p.name as product_name',
+                'p.name_ar as product_name',
                 'wi.warehouse_id',
                 'w.name as warehouse_name',
                 'p.carton_size',
@@ -78,12 +78,12 @@ class DashboardController extends Controller
         if ($request && $request->has('search') && !empty($request->search)) {
             $search = '%' . $request->search . '%';
             $query->where(function($q) use ($search) {
-                $q->where('p.name', 'LIKE', $search)
+                $q->where('p.name_ar', 'LIKE', $search)
                   ->orWhere('w.name', 'LIKE', $search);
             });
         }
 
-        return $query->orderBy('p.name')
+        return $query->orderBy('p.name_ar')
             ->orderBy('w.name')
             ->paginate(50)
             ->through(function ($row) {

@@ -112,6 +112,51 @@
             color: #888;
             line-height: 1.5;
         }
+
+        .additional-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .access-link {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .access-link:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .access-link .icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .access-link span {
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .additional-links {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
@@ -150,6 +195,18 @@
         <div class="security-note">
             تأكد من عدم مشاركة رقم المرور مع أي شخص آخر<br>
             للحماية والأمان
+        </div>
+
+        <!-- Additional Access Links -->
+        <div class="additional-links">
+            <a href="/warehouse-manager" class="access-link">
+                <i class="icon">🏭</i>
+                <span>لوحة تحكم المخازن</span>
+            </a>
+            <a href="/warehouses" class="access-link">
+                <i class="icon">🏪</i>
+                <span>دخول المخازن</span>
+            </a>
         </div>
     </div>
     
