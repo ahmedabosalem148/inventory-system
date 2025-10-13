@@ -1,0 +1,20 @@
+# React Frontend - Coming Soon
+
+This directory will contain the React TypeScript SPA for the inventory management system.
+
+## Tech Stack (Planned):
+- React 18
+- TypeScript
+- Vite
+- TanStack Query v5
+- Zustand
+- React Router v6
+- Tailwind CSS + shadcn/ui
+- Axios
+
+## Setup:
+```bash
+cd client-react
+npm install
+npm run dev
+```

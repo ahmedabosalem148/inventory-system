@@ -1,0 +1,564 @@
+/**
+ * Responsive Styles for Inventory System
+ * 
+ * Breakpoints:
+ * - Mobile: 320px - 767px
+ * - Tablet: 768px - 1023px
+ * - Desktop: 1024px+
+ */
+
+/* ==========================================================================
+   Root Variables
+   ========================================================================== */
+
+:root {
+    --mobile-padding: 0.75rem;
+    --tablet-padding: 1rem;
+    --desktop-padding: 1.5rem;
+    
+    --mobile-font-size: 0.875rem;
+    --tablet-font-size: 0.9375rem;
+    --desktop-font-size: 1rem;
+    
+    --touch-target-size: 44px; /* حجم مناسب للمس */
+}
+
+/* ==========================================================================
+   Mobile First Base Styles (320px+)
+   ========================================================================== */
+
+body {
+    font-size: var(--mobile-font-size);
+}
+
+.container-fluid {
+    padding-left: var(--mobile-padding);
+    padding-right: var(--mobile-padding);
+}
+
+/* ==========================================================================
+   Buttons & Inputs (Mobile Optimized)
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    /* Buttons أكبر للمس */
+    .btn {
+        min-height: var(--touch-target-size);
+        padding: 0.75rem 1rem;
+        font-size: 0.9375rem;
+    }
+    
+    .btn-sm {
+        min-height: 36px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Form Controls */
+    .form-control,
+    .form-select {
+        min-height: var(--touch-target-size);
+        font-size: 1rem; /* منع zoom في iOS */
+    }
+    
+    /* Checkboxes & Radios */
+    .form-check-input {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+    
+    /* Labels */
+    .form-label {
+        font-size: 0.875rem;
+        margin-bottom: 0.375rem;
+    }
+}
+
+/* ==========================================================================
+   Tables - Responsive Design
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    /* إخفاء الجدول التقليدي */
+    .table-responsive {
+        border: none;
+    }
+    
+    .table-mobile-cards {
+        display: block;
+    }
+    
+    .table-mobile-cards thead {
+        display: none;
+    }
+    
+    .table-mobile-cards tbody,
+    .table-mobile-cards tr {
+        display: block;
+    }
+    
+    .table-mobile-cards tr {
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        background: white;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .table-mobile-cards td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border-bottom: 1px solid #f0f0f0;
+        text-align: right;
+    }
+    
+    .table-mobile-cards td:last-child {
+        border-bottom: none;
+    }
+    
+    .table-mobile-cards td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        margin-left: 1rem;
+        flex-shrink: 0;
+    }
+    
+    /* Action buttons في الجداول */
+    .table-mobile-cards .btn-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    /* Pagination */
+    .pagination {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    
+    .pagination .page-link {
+        min-width: 40px;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* Tablet: عرض مختصر للجدول */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .table {
+        font-size: 0.875rem;
+    }
+    
+    .table th,
+    .table td {
+        padding: 0.5rem;
+    }
+}
+
+/* ==========================================================================
+   Cards
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .card-header {
+        padding: 0.75rem;
+        font-size: 1rem;
+    }
+    
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    .card-title {
+        font-size: 1.125rem;
+    }
+}
+
+/* ==========================================================================
+   Navigation & Sidebar
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    /* Navbar */
+    .navbar {
+        padding: 0.5rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1.125rem;
+    }
+    
+    /* Sidebar يصبح drawer */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        right: -280px; /* مخفي افتراضياً للـ RTL */
+        width: 280px;
+        height: 100vh;
+        background: white;
+        box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+        transition: right 0.3s ease;
+        z-index: 1050;
+        overflow-y: auto;
+    }
+    
+    .sidebar.show {
+        right: 0;
+    }
+    
+    /* Overlay */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1040;
+        display: none;
+    }
+    
+    .sidebar-overlay.show {
+        display: block;
+    }
+    
+    /* Hamburger Menu */
+    .navbar-toggler {
+        min-height: var(--touch-target-size);
+        min-width: var(--touch-target-size);
+    }
+}
+
+/* ==========================================================================
+   Filters Component
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    .advanced-filter .row {
+        gap: 0.75rem;
+    }
+    
+    .advanced-filter .col-md-3,
+    .advanced-filter .col-md-4,
+    .advanced-filter .col-md-6 {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100%;
+    }
+    
+    .advanced-filter .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .advanced-filter .d-flex {
+        flex-direction: column;
+    }
+}
+
+/* ==========================================================================
+   Modals
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    .modal-fullscreen-md-down {
+        max-width: 100%;
+        margin: 0;
+    }
+    
+    .modal-fullscreen-md-down .modal-content {
+        height: 100vh;
+        border: 0;
+        border-radius: 0;
+    }
+}
+
+/* ==========================================================================
+   Forms - Multi-column to Single Column
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    .row.g-3 > [class*="col-"] {
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Labels على نفس السطر مع Inputs في Desktop، فوقها في Mobile */
+    .row.align-items-center .col-auto {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* ==========================================================================
+   Dashboard Widgets
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    .dashboard-widget {
+        margin-bottom: 1rem;
+    }
+    
+    .widget-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.5rem;
+    }
+    
+    .widget-stats {
+        font-size: 1.5rem;
+    }
+}
+
+/* ==========================================================================
+   Alerts & Notifications
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    .alert {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .alert .btn-close {
+        padding: 0.5rem;
+    }
+}
+
+/* ==========================================================================
+   Badges & Labels
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+    }
+}
+
+/* ==========================================================================
+   Spacing Utilities - Mobile Adjustments
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    .mb-4, .my-4 {
+        margin-bottom: 1rem !important;
+    }
+    
+    .mt-4, .my-4 {
+        margin-top: 1rem !important;
+    }
+    
+    .p-4 {
+        padding: 1rem !important;
+    }
+}
+
+/* ==========================================================================
+   Text & Typography
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        font-size: 1.25rem;
+    }
+    
+    h4 {
+        font-size: 1.125rem;
+    }
+    
+    h5 {
+        font-size: 1rem;
+    }
+    
+    /* إخفاء نصوص ثانوية على Mobile */
+    .d-none-mobile {
+        display: none !important;
+    }
+    
+    /* نص أصغر للتفاصيل */
+    small, .small {
+        font-size: 0.75rem;
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    .no-print,
+    .btn,
+    .navbar,
+    .sidebar,
+    .pagination {
+        display: none !important;
+    }
+    
+    body {
+        font-size: 12pt;
+        color: black;
+    }
+    
+    .card,
+    .table {
+        page-break-inside: avoid;
+    }
+}
+
+/* ==========================================================================
+   Tablet Styles (768px - 1023px)
+   ========================================================================== */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    body {
+        font-size: var(--tablet-font-size);
+    }
+    
+    .container-fluid {
+        padding-left: var(--tablet-padding);
+        padding-right: var(--tablet-padding);
+    }
+    
+    /* Sidebar أضيق */
+    .sidebar {
+        width: 240px;
+    }
+}
+
+/* ==========================================================================
+   Desktop Styles (1024px+)
+   ========================================================================== */
+
+@media (min-width: 1024px) {
+    body {
+        font-size: var(--desktop-font-size);
+    }
+    
+    .container-fluid {
+        padding-left: var(--desktop-padding);
+        padding-right: var(--desktop-padding);
+    }
+    
+    /* Hover effects فقط على Desktop */
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.025);
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+    }
+}
+
+/* ==========================================================================
+   RTL Specific Adjustments
+   ========================================================================== */
+
+[dir="rtl"] .sidebar {
+    right: auto;
+    left: -280px;
+}
+
+[dir="rtl"] .sidebar.show {
+    left: 0;
+    right: auto;
+}
+
+@media (max-width: 767px) {
+    [dir="rtl"] .table-mobile-cards td::before {
+        margin-left: 0;
+        margin-right: 1rem;
+    }
+}
+
+/* ==========================================================================
+   Accessibility - Touch Targets
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    /* جميع العناصر القابلة للنقر */
+    a, button, .btn, .form-check-input, .page-link {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Focus states واضحة */
+    a:focus, button:focus, .btn:focus, input:focus, select:focus {
+        outline: 2px solid #0d6efd;
+        outline-offset: 2px;
+    }
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+@media (max-width: 767px) {
+    .spinner-border-sm {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+/* عرض/إخفاء حسب حجم الشاشة */
+@media (max-width: 767px) {
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .show-mobile {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    .hide-tablet {
+        display: none !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .hide-desktop {
+        display: none !important;
+    }
+}
+
+/* Stack على Mobile */
+@media (max-width: 767px) {
+    .stack-mobile {
+        flex-direction: column !important;
+    }
+    
+    .stack-mobile > * {
+        width: 100% !important;
+        margin-bottom: 0.5rem;
+    }
+}
