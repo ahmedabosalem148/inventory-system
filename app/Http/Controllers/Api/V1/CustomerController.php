@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CustomerResource;
 use App\Models\Customer;
+use App\Services\CustomerLedgerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -12,6 +13,13 @@ use Illuminate\Support\Facades\DB;
 
 class CustomerController extends Controller
 {
+    protected CustomerLedgerService $ledgerService;
+
+    public function __construct(CustomerLedgerService $ledgerService)
+    {
+        $this->ledgerService = $ledgerService;
+    }
+
     /**
      * عرض قائمة العملاء مع فلترة
      * 
@@ -241,5 +249,200 @@ class CustomerController extends Controller
                 ];
             }),
         ], 200);
+    }
+
+    /**
+     * الحصول على قائمة العملاء مع الأرصدة
+     * 
+     * GET /api/v1/customers/balances
+     * Query: ?only_with_balance=1&sort_by=balance
+     */
+    public function getCustomersWithBalances(Request $request): JsonResponse
+    {
+        $request->validate([
+            'only_with_balance' => 'sometimes|boolean',
+            'sort_by' => 'sometimes|in:name,balance,last_activity',
+        ]);
+
+        try {
+            $onlyWithBalance = $request->boolean('only_with_balance', false);
+            $sortBy = $request->get('sort_by', 'name');
+
+            $customers = $this->ledgerService->getCustomersBalances($onlyWithBalance, $sortBy);
+
+            return response()->json([
+                'data' => $customers,
+                'meta' => [
+                    'total_count' => $customers->count(),
+                    'total_debtors' => $this->ledgerService->getTotalDebtors(),
+                    'total_creditors' => $this->ledgerService->getTotalCreditors(),
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'حدث خطأ أثناء جلب أرصدة العملاء',
+                'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
+            ], 500);
+        }
+    }
+
+    /**
+     * كشف حساب العميل
+     * 
+     * GET /api/v1/customers/{id}/statement
+     * Query: ?from_date=2025-01-01&to_date=2025-12-31&include_balance=1
+     */
+    public function getStatement(Request $request, Customer $customer): JsonResponse
+    {
+        $validated = $request->validate([
+            'from_date' => 'required|date',
+            'to_date' => 'required|date|after_or_equal:from_date',
+            'include_balance' => 'sometimes|boolean',
+        ], [
+            'from_date.required' => 'تاريخ البداية مطلوب',
+            'to_date.required' => 'تاريخ النهاية مطلوب',
+            'to_date.after_or_equal' => 'تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية',
+        ]);
+
+        try {
+            $includeBalance = $request->boolean('include_balance', true);
+
+            $statement = $this->ledgerService->getCustomerStatement(
+                $customer->id,
+                $validated['from_date'],
+                $validated['to_date'],
+                $includeBalance
+            );
+
+            return response()->json([
+                'data' => [
+                    'customer' => [
+                        'id' => $customer->id,
+                        'code' => $customer->code,
+                        'name' => $customer->name,
+                        'phone' => $customer->phone,
+                    ],
+                    'statement' => $statement,
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'حدث خطأ أثناء جلب كشف الحساب',
+                'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
+            ], 500);
+        }
+    }
+
+    /**
+     * الحصول على رصيد العميل الحالي
+     * 
+     * GET /api/v1/customers/{id}/balance
+     */
+    public function getBalance(Customer $customer): JsonResponse
+    {
+        try {
+            $balance = $this->ledgerService->calculateBalance($customer->id);
+
+            return response()->json([
+                'data' => [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
+                    'balance' => $balance,
+                    'balance_formatted' => number_format(abs($balance), 2) . ' ج.م',
+                    'status' => $balance > 0 ? 'مدين' : ($balance < 0 ? 'دائن' : 'متوازن'),
+                    'status_english' => $balance > 0 ? 'debtor' : ($balance < 0 ? 'creditor' : 'zero'),
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'حدث خطأ أثناء حساب الرصيد',
+                'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
+            ], 500);
+        }
+    }
+
+    /**
+     * الحصول على نشاط العميل
+     * 
+     * GET /api/v1/customers/{id}/activity
+     */
+    public function getActivity(Customer $customer): JsonResponse
+    {
+        try {
+            // الحصول على آخر 10 قيود
+            $recentEntries = $customer->ledgerEntries()
+                ->orderBy('entry_date', 'desc')
+                ->orderBy('id', 'desc')
+                ->limit(10)
+                ->get();
+
+            // الحصول على إحصائيات
+            $stats = $customer->ledgerEntries()
+                ->selectRaw('
+                    COUNT(*) as total_entries,
+                    SUM(debit_aliah) as total_debit,
+                    SUM(credit_lah) as total_credit,
+                    MAX(entry_date) as last_entry_date,
+                    MIN(entry_date) as first_entry_date
+                ')
+                ->first();
+
+            // الحصول على آخر فاتورة
+            $lastVoucher = DB::table('issue_vouchers')
+                ->where('customer_id', $customer->id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            return response()->json([
+                'data' => [
+                    'customer' => [
+                        'id' => $customer->id,
+                        'name' => $customer->name,
+                    ],
+                    'current_balance' => $this->ledgerService->calculateBalance($customer->id),
+                    'recent_entries' => $recentEntries,
+                    'statistics' => [
+                        'total_entries' => $stats->total_entries ?? 0,
+                        'total_debit' => round($stats->total_debit ?? 0, 2),
+                        'total_credit' => round($stats->total_credit ?? 0, 2),
+                        'last_entry_date' => $stats->last_entry_date,
+                        'first_entry_date' => $stats->first_entry_date,
+                        'last_voucher_date' => $lastVoucher?->created_at,
+                        'last_voucher_number' => $lastVoucher?->voucher_number,
+                    ],
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'حدث خطأ أثناء جلب نشاط العميل',
+                'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
+            ], 500);
+        }
+    }
+
+    /**
+     * إحصائيات دفتر العملاء
+     * 
+     * GET /api/v1/customers/statistics
+     */
+    public function getStatistics(): JsonResponse
+    {
+        try {
+            $statistics = $this->ledgerService->getStatistics();
+
+            return response()->json([
+                'data' => $statistics,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'حدث خطأ أثناء جلب الإحصائيات',
+                'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
+            ], 500);
+        }
     }
 }

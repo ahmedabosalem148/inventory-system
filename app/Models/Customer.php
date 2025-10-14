@@ -15,6 +15,7 @@ class Customer extends Model
         'balance',
         'is_active',
         'notes',
+        'last_activity_at',
     ];
 
     protected $casts = [

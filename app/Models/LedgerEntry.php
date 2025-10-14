@@ -14,6 +14,7 @@ class LedgerEntry extends Model
         'customer_id',
         'type',
         'amount',
+        'transaction_date',
         'description',
         'reference_type',
         'reference_id',
@@ -21,6 +22,7 @@ class LedgerEntry extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'transaction_date' => 'date',
     ];
 
     public function customer(): BelongsTo

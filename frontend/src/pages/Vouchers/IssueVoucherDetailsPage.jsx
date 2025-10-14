@@ -194,15 +194,25 @@ const IssueVoucherDetailsPage = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-3 space-x-reverse">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-blue-600" />
+                      <div className={`w-10 h-10 ${voucher.is_transfer ? 'bg-purple-100' : 'bg-blue-100'} rounded-lg flex items-center justify-center`}>
+                        <FileText className={`w-5 h-5 ${voucher.is_transfer ? 'text-purple-600' : 'text-blue-600'}`} />
                       </div>
                       <div>
                         <h2 className="text-xl font-semibold">{voucher.voucher_number}</h2>
-                        <p className="text-gray-600">فاتورة صرف</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-gray-600">{voucher.is_transfer ? 'تحويل بين فروع' : 'فاتورة صرف'}</p>
+                          {voucher.is_transfer && (
+                            <Badge variant="info" className="text-xs">تحويل</Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    {getStatusBadge(voucher.status)}
+                    <div className="flex flex-col items-end gap-2">
+                      {getStatusBadge(voucher.status)}
+                      {voucher.approved_at && (
+                        <Badge variant="success" className="text-xs">معتمد</Badge>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -233,8 +243,18 @@ const IssueVoucherDetailsPage = () => {
                       {voucher.branch && (
                         <div className="flex items-center space-x-2 space-x-reverse">
                           <Package className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-600">المخزن:</span>
+                          <span className="text-gray-600">
+                            {voucher.is_transfer ? 'الفرع المصدر:' : 'المخزن:'}
+                          </span>
                           <span className="font-medium">{voucher.branch.name}</span>
+                        </div>
+                      )}
+                      
+                      {voucher.is_transfer && voucher.target_branch && (
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Package className="w-4 h-4 text-green-400" />
+                          <span className="text-gray-600">الفرع المستهدف:</span>
+                          <span className="font-medium text-green-600">{voucher.target_branch.name}</span>
                         </div>
                       )}
 
@@ -351,13 +371,53 @@ const IssueVoucherDetailsPage = () => {
                 </div>
               </Card>
 
+              {/* Approval Info */}
+              {voucher.approved_at && (
+                <Card>
+                  <div className="p-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2 space-x-reverse text-green-700">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span>معلومات الاعتماد</span>
+                    </h3>
+                    
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">تاريخ الاعتماد:</span>
+                        <span className="font-medium">{formatDate(voucher.approved_at)}</span>
+                      </div>
+                      
+                      {voucher.approved_by_user && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">اعتمد بواسطة:</span>
+                          <span className="font-medium">{voucher.approved_by_user.name}</span>
+                        </div>
+                      )}
+                      
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center space-x-2 space-x-reverse text-green-700">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-xs font-medium">
+                            {voucher.is_transfer ? 'تم تنفيذ التحويل بنجاح' : 'تم اعتماد الإذن وخصم المخزون'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
               {/* Payment Summary */}
-              <Card>
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2 space-x-reverse">
-                    <CreditCard className="w-5 h-5" />
-                    <span>حالة السداد</span>
-                  </h3>
+              {!voucher.is_transfer && (
+                <Card>
+                  <div className="p-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2 space-x-reverse">
+                      <CreditCard className="w-5 h-5" />
+                      <span>حالة السداد</span>
+                    </h3>
                   
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
@@ -392,9 +452,10 @@ const IssueVoucherDetailsPage = () => {
                   </div>
                 </div>
               </Card>
+              )}
 
               {/* Payment History */}
-              {payments.length > 0 && (
+              {!voucher.is_transfer && payments.length > 0 && (
                 <Card>
                   <div className="p-6">
                     <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2 space-x-reverse">

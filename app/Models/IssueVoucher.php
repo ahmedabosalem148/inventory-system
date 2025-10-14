@@ -12,6 +12,7 @@ class IssueVoucher extends Model
         'customer_name',
         'branch_id',
         'issue_date',
+        'voucher_type',
         'notes',
         'is_transfer',
         'target_branch_id',

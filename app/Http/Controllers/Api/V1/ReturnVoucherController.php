@@ -8,6 +8,7 @@ use App\Models\ReturnVoucher;
 use App\Services\InventoryService;
 use App\Services\LedgerService;
 use App\Services\SequencerService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -193,6 +194,41 @@ class ReturnVoucherController extends Controller
 
         $returnVoucher->load(['customer', 'branch', 'items.product', 'creator']);
         return new ReturnVoucherResource($returnVoucher);
+    }
+
+    /**
+     * طباعة إذن مرتجع كـ PDF
+     */
+    public function print(Request $request, ReturnVoucher $returnVoucher)
+    {
+        $user = $request->user();
+
+        // Check access: admin sees all, regular users need access to branch
+        if (!$user->hasRole('super-admin')) {
+            if (!$user->canAccessBranch($returnVoucher->branch_id)) {
+                return response()->json([
+                    'message' => 'ليس لديك صلاحية لطباعة هذا الإذن'
+                ], 403);
+            }
+        }
+
+        $returnVoucher->load(['customer', 'branch', 'items.product', 'creator']);
+
+        $pdf = Pdf::loadView('pdf.return-voucher', [
+            'voucher' => $returnVoucher
+        ]);
+
+        // Set paper size and orientation
+        $pdf->setPaper('a4', 'portrait');
+
+        // Return PDF as download or inline view
+        $filename = 'return-voucher-' . $returnVoucher->voucher_number . '.pdf';
+        
+        if ($request->has('download')) {
+            return $pdf->download($filename);
+        }
+        
+        return $pdf->stream($filename);
     }
 
     /**

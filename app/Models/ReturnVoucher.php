@@ -17,8 +17,13 @@ class ReturnVoucher extends Model
         'customer_name',
         'branch_id',
         'return_date',
+        'voucher_type',
+        'subtotal',
+        'discount_amount',
+        'net_total',
         'total_amount',
         'status',
+        'reason',
         'notes',
         'approved_at',
         'approved_by',
@@ -27,6 +32,9 @@ class ReturnVoucher extends Model
 
     protected $casts = [
         'return_date' => 'date',
+        'subtotal' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'net_total' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'approved_at' => 'datetime',
     ];
@@ -141,44 +149,8 @@ class ReturnVoucher extends Model
      */
     public function approve(User $user): self
     {
-        if ($this->isApproved()) {
-            throw new \Exception('الإذن معتمد بالفعل');
-        }
-
-        return \DB::transaction(function () use ($user) {
-            // إعطاء رقم تسلسلي من النطاق الخاص للإرجاع
-            $sequencerService = app(\App\Services\SequencerService::class);
-            $this->voucher_number = $sequencerService->getNextReturnNumber();
-            
-            // تسجيل الاعتماد
-            $this->approved_at = now();
-            $this->approved_by = $user->id;
-            $this->status = 'completed'; // الحالة النهائية
-            
-            $this->save();
-
-            // تسجيل في دفتر العميل (قيد "له" - خصم من المديونية)
-            if ($this->customer_id) {
-                $ledgerService = app(\App\Services\CustomerLedgerService::class);
-                
-                // حساب المبلغ النهائي
-                $totalAmount = $this->total_amount ?? 0;
-                
-                // قيد "له" للارتجاع - يخصم من مديونية العميل
-                $ledgerService->addEntry(
-                    customerId: $this->customer_id,
-                    description: "ارتجاع رقم {$this->voucher_number}",
-                    debitAliah: 0,
-                    creditLah: $totalAmount, // له - خصم من المديونية
-                    refTable: 'return_vouchers',
-                    refId: $this->id,
-                    notes: $this->reason ?? 'ارتجاع بضاعة',
-                    createdBy: $user->id
-                );
-            }
-
-            return $this;
-        });
+        $returnService = app(\App\Services\ReturnService::class);
+        return $returnService->processReturn($this, $user);
     }
 
     /**

@@ -206,4 +206,133 @@ class LedgerService
 
         return $debits - $credits;
     }
+
+    /**
+     * Record cheque received from customer (debit - عليه)
+     * When we receive a cheque, customer owes us money
+     *
+     * @param int $customerId
+     * @param float $amount
+     * @param int $chequeId
+     * @param string $description
+     * @param string|null $date
+     * @return LedgerEntry
+     */
+    public function recordChequeReceived(
+        int $customerId,
+        float $amount,
+        int $chequeId,
+        string $description,
+        ?string $date = null
+    ): LedgerEntry {
+        $this->validateAmount($amount);
+        $this->validateCustomerExists($customerId);
+
+        return LedgerEntry::create([
+            'customer_id' => $customerId,
+            'type' => 'debit',
+            'amount' => $amount,
+            'description' => $description,
+            'reference_type' => 'App\\Models\\Cheque',
+            'reference_id' => $chequeId,
+            'entry_date' => $date ?? now()->toDateString(),
+        ]);
+    }
+
+    /**
+     * Record cheque cleared (credit - له)
+     * When cheque is cleared, it's a payment that reduces customer debt
+     *
+     * @param int $customerId
+     * @param float $amount
+     * @param int $chequeId
+     * @param string $description
+     * @param string|null $date
+     * @return LedgerEntry
+     */
+    public function recordChequeCleared(
+        int $customerId,
+        float $amount,
+        int $chequeId,
+        string $description,
+        ?string $date = null
+    ): LedgerEntry {
+        $this->validateAmount($amount);
+        $this->validateCustomerExists($customerId);
+
+        return LedgerEntry::create([
+            'customer_id' => $customerId,
+            'type' => 'credit',
+            'amount' => $amount,
+            'description' => $description,
+            'reference_type' => 'App\\Models\\Cheque',
+            'reference_id' => $chequeId,
+            'entry_date' => $date ?? now()->toDateString(),
+        ]);
+    }
+
+    /**
+     * Record cheque returned (reverse the original debit)
+     * When cheque is returned, we need to reverse the original entry
+     *
+     * @param int $customerId
+     * @param float $amount
+     * @param int $chequeId
+     * @param string $description
+     * @param string|null $date
+     * @return LedgerEntry
+     */
+    public function recordChequeReturned(
+        int $customerId,
+        float $amount,
+        int $chequeId,
+        string $description,
+        ?string $date = null
+    ): LedgerEntry {
+        $this->validateAmount($amount);
+        $this->validateCustomerExists($customerId);
+
+        // عند إرجاع الشيك، نسجل قيد عكسي (credit) لإلغاء القيد الأصلي
+        return LedgerEntry::create([
+            'customer_id' => $customerId,
+            'type' => 'credit',
+            'amount' => $amount,
+            'description' => $description,
+            'reference_type' => 'App\\Models\\Cheque',
+            'reference_id' => $chequeId,
+            'entry_date' => $date ?? now()->toDateString(),
+        ]);
+    }
+
+    /**
+     * Reverse cheque entry (for cancellation)
+     *
+     * @param int $customerId
+     * @param float $amount
+     * @param int $chequeId
+     * @param string $description
+     * @param string|null $date
+     * @return LedgerEntry
+     */
+    public function reverseChequeEntry(
+        int $customerId,
+        float $amount,
+        int $chequeId,
+        string $description,
+        ?string $date = null
+    ): LedgerEntry {
+        $this->validateAmount($amount);
+        $this->validateCustomerExists($customerId);
+
+        // Reverse the original debit entry
+        return LedgerEntry::create([
+            'customer_id' => $customerId,
+            'type' => 'credit',
+            'amount' => $amount,
+            'description' => $description,
+            'reference_type' => 'App\\Models\\Cheque',
+            'reference_id' => $chequeId,
+            'entry_date' => $date ?? now()->toDateString(),
+        ]);
+    }
 }

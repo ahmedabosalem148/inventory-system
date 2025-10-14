@@ -84,6 +84,19 @@ Route::prefix('v1')
     // ========================================================================
     Route::apiResource('branches', BranchController::class)->names('api.branches');
     Route::apiResource('products', ProductController::class)->names('api.products');
+
+    // Customer Management (TASK-009) - Must be before apiResource
+    Route::get('customers-balances', [CustomerController::class, 'getCustomersWithBalances'])
+        ->name('api.customers.balances');
+    Route::get('customers-statistics', [CustomerController::class, 'getStatistics'])
+        ->name('api.customers.statistics');
+    Route::get('customers/{customer}/statement', [CustomerController::class, 'getStatement'])
+        ->name('api.customers.statement');
+    Route::get('customers/{customer}/balance', [CustomerController::class, 'getBalance'])
+        ->name('api.customers.balance');
+    Route::get('customers/{customer}/activity', [CustomerController::class, 'getActivity'])
+        ->name('api.customers.activity');
+    
     Route::apiResource('customers', CustomerController::class)->names('api.customers');
 
     // ========================================================================
@@ -96,13 +109,13 @@ Route::prefix('v1')
         ->names('api.return-vouchers');
     
     // Voucher actions
-    Route::post('issue-vouchers/{voucher}/print', [IssueVoucherController::class, 'print'])
+    Route::get('issue-vouchers/{issueVoucher}/print', [IssueVoucherController::class, 'print'])
         ->name('api.issue-vouchers.print');
     
     // Issue vouchers statistics
     Route::get('issue-vouchers-stats', [IssueVoucherController::class, 'stats'])
         ->name('api.issue-vouchers.stats');
-    Route::post('return-vouchers/{voucher}/print', [ReturnVoucherController::class, 'print'])
+    Route::get('return-vouchers/{returnVoucher}/print', [ReturnVoucherController::class, 'print'])
         ->name('api.return-vouchers.print');
 
     // ========================================================================
@@ -159,6 +172,26 @@ Route::prefix('v1')
         
         // Financial reports
         Route::get('financial/profit-loss', [ReportController::class, 'profitLoss'])->name('profit-loss');
+        
+        // Inventory reports
+        Route::get('inventory/total', [\App\Http\Controllers\Api\V1\InventoryReportController::class, 'totalInventory'])->name('inventory-total');
+        Route::get('inventory/product-movement/{productId}', [\App\Http\Controllers\Api\V1\InventoryReportController::class, 'productMovement'])->name('product-movement');
+        Route::get('inventory/low-stock', [\App\Http\Controllers\Api\V1\InventoryReportController::class, 'lowStock'])->name('low-stock');
+        Route::get('inventory/summary', [\App\Http\Controllers\Api\V1\InventoryReportController::class, 'summary'])->name('inventory-summary');
+        
+        // Customer reports
+        Route::get('customers/balances', [\App\Http\Controllers\Api\V1\CustomerReportController::class, 'balances'])->name('customers-balances');
+        Route::get('customers/{customerId}/statement', [\App\Http\Controllers\Api\V1\CustomerReportController::class, 'statement'])->name('customer-statement');
+        Route::get('customers/comparison', [\App\Http\Controllers\Api\V1\CustomerReportController::class, 'comparison'])->name('customers-comparison');
+        Route::get('customers/activity', [\App\Http\Controllers\Api\V1\CustomerReportController::class, 'activity'])->name('customers-activity');
+        
+        // Sales reports
+        Route::get('sales/period', [\App\Http\Controllers\Api\V1\SalesReportController::class, 'byPeriod'])->name('sales-period');
+        Route::get('sales/by-product', [\App\Http\Controllers\Api\V1\SalesReportController::class, 'byProduct'])->name('sales-by-product');
+        Route::get('sales/by-category', [\App\Http\Controllers\Api\V1\SalesReportController::class, 'byCategory'])->name('sales-by-category');
+        Route::get('sales/comparison', [\App\Http\Controllers\Api\V1\SalesReportController::class, 'comparison'])->name('sales-comparison');
+        Route::get('sales/top-customers', [\App\Http\Controllers\Api\V1\SalesReportController::class, 'topCustomers'])->name('sales-top-customers');
+        Route::get('sales/summary', [\App\Http\Controllers\Api\V1\SalesReportController::class, 'summary'])->name('sales-summary');
     });
 
     // ========================================================================

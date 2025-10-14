@@ -8,6 +8,7 @@ use App\Models\IssueVoucher;
 use App\Services\InventoryService;
 use App\Services\LedgerService;
 use App\Services\SequencerService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -91,13 +92,19 @@ class IssueVoucherController extends Controller
             'branch_id' => 'required|exists:branches,id',
             'issue_date' => 'required|date',
             'notes' => 'nullable|string',
-            'discount_type' => ['nullable', Rule::in(['fixed', 'percentage'])],
+            // Header discount (خصم الفاتورة)
+            'discount_type' => ['nullable', Rule::in(['none', 'fixed', 'percentage'])],
             'discount_value' => 'nullable|numeric|min:0',
+            
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.discount_amount' => 'nullable|numeric|min:0',
+            
+            // Line item discount (خصم البند)
+            'items.*.discount_type' => ['nullable', Rule::in(['none', 'fixed', 'percentage'])],
+            'items.*.discount_value' => 'nullable|numeric|min:0',
+            'items.*.discount_amount' => 'nullable|numeric|min:0', // للتوافق مع الكود القديم
         ]);
 
         // Check permissions: regular users need full_access on the branch
@@ -137,12 +144,18 @@ class IssueVoucherController extends Controller
 
             // إضافة الأصناف وتحديث المخزون
             foreach ($validated['items'] as $itemData) {
+                // حساب تفاصيل البند مع الخصومات
+                $itemCalculations = $this->calculateItemTotals($itemData);
+                
                 $item = $voucher->items()->create([
                     'product_id' => $itemData['product_id'],
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $itemData['unit_price'],
-                    'discount_amount' => $itemData['discount_amount'] ?? 0,
-                    'total' => ($itemData['quantity'] * $itemData['unit_price']) - ($itemData['discount_amount'] ?? 0),
+                    'total_price' => $itemCalculations['total_price'],
+                    'discount_type' => $itemCalculations['discount_type'],
+                    'discount_value' => $itemCalculations['discount_value'],
+                    'discount_amount' => $itemCalculations['discount_amount'],
+                    'net_price' => $itemCalculations['net_price'],
                 ]);
 
                 // خصم من المخزون
@@ -196,8 +209,57 @@ class IssueVoucherController extends Controller
             }
         }
 
-        $issueVoucher->load(['customer', 'branch', 'items.product', 'creator']);
+        $issueVoucher->load([
+            'customer', 
+            'branch', 
+            'targetBranch', 
+            'items.product', 
+            'creator',
+            'approver'
+        ]);
         return new IssueVoucherResource($issueVoucher);
+    }
+
+    /**
+     * طباعة إذن صرف كـ PDF
+     */
+    public function print(Request $request, IssueVoucher $issueVoucher)
+    {
+        $user = $request->user();
+
+        // Check access: admin sees all, regular users need access to branch
+        if (!$user->hasRole('super-admin')) {
+            if (!$user->canAccessBranch($issueVoucher->branch_id)) {
+                return response()->json([
+                    'message' => 'ليس لديك صلاحية لطباعة هذا الإذن'
+                ], 403);
+            }
+        }
+
+        $issueVoucher->load([
+            'customer', 
+            'branch', 
+            'targetBranch', 
+            'items.product', 
+            'creator',
+            'approver'
+        ]);
+
+        $pdf = Pdf::loadView('pdf.issue-voucher', [
+            'voucher' => $issueVoucher
+        ]);
+
+        // Set paper size and orientation
+        $pdf->setPaper('a4', 'portrait');
+
+        // Return PDF as download or inline view
+        $filename = 'issue-voucher-' . $issueVoucher->voucher_number . '.pdf';
+        
+        if ($request->has('download')) {
+            return $pdf->download($filename);
+        }
+        
+        return $pdf->stream($filename);
     }
 
     /**
@@ -342,32 +404,90 @@ class IssueVoucherController extends Controller
 
     /**
      * حساب إجماليات الإذن
+     * يحسب خصومات البنود وخصم الفاتورة
      */
     private function calculateVoucherTotals(array $data): array
     {
-        $subtotal = 0;
+        $subtotal = 0; // مجموع الأسعار قبل أي خصومات
+        $itemsSubtotal = 0; // مجموع البنود بعد خصومات البنود
 
         foreach ($data['items'] as $item) {
-            $itemTotal = ($item['quantity'] * $item['unit_price']) - ($item['discount_amount'] ?? 0);
-            $subtotal += $itemTotal;
+            // إجمالي البند قبل خصم البند
+            $itemTotalBeforeDiscount = $item['quantity'] * $item['unit_price'];
+            $subtotal += $itemTotalBeforeDiscount;
+            
+            // حساب خصم البند
+            $itemDiscountAmount = 0;
+            if (isset($item['discount_type']) && isset($item['discount_value'])) {
+                if ($item['discount_type'] === 'fixed') {
+                    $itemDiscountAmount = $item['discount_value'];
+                } elseif ($item['discount_type'] === 'percentage') {
+                    $itemDiscountAmount = ($itemTotalBeforeDiscount * $item['discount_value']) / 100;
+                }
+            } elseif (isset($item['discount_amount'])) {
+                // للتوافق مع الكود القديم
+                $itemDiscountAmount = $item['discount_amount'];
+            }
+            
+            // صافي البند بعد خصم البند
+            $itemNetPrice = $itemTotalBeforeDiscount - $itemDiscountAmount;
+            $itemsSubtotal += $itemNetPrice;
         }
 
-        $discountAmount = 0;
+        // حساب خصم الفاتورة (Header Discount) - يطبق على مجموع البنود بعد خصوماتها
+        $headerDiscountAmount = 0;
         if (isset($data['discount_type']) && isset($data['discount_value'])) {
             if ($data['discount_type'] === 'fixed') {
-                $discountAmount = $data['discount_value'];
+                $headerDiscountAmount = $data['discount_value'];
             } elseif ($data['discount_type'] === 'percentage') {
-                $discountAmount = ($subtotal * $data['discount_value']) / 100;
+                $headerDiscountAmount = ($itemsSubtotal * $data['discount_value']) / 100;
             }
         }
 
-        $netTotal = $subtotal - $discountAmount;
+        // الصافي النهائي
+        $netTotal = $itemsSubtotal - $headerDiscountAmount;
 
         return [
-            'total_amount' => $subtotal,
-            'subtotal' => $subtotal,
-            'discount_amount' => $discountAmount,
-            'net_total' => $netTotal,
+            'total_amount' => round($subtotal, 2),           // إجمالي قبل كل الخصومات
+            'subtotal' => round($itemsSubtotal, 2),          // بعد خصومات البنود وقبل خصم الفاتورة
+            'discount_amount' => round($headerDiscountAmount, 2), // خصم الفاتورة فقط
+            'net_total' => round($netTotal, 2),              // الصافي النهائي
+        ];
+    }
+
+    /**
+     * حساب تفاصيل البند (مع الخصومات)
+     */
+    private function calculateItemTotals(array $itemData): array
+    {
+        // إجمالي قبل الخصم
+        $totalPrice = $itemData['quantity'] * $itemData['unit_price'];
+        
+        // حساب خصم البند
+        $discountAmount = 0;
+        $discountType = $itemData['discount_type'] ?? 'none';
+        $discountValue = $itemData['discount_value'] ?? 0;
+        
+        if ($discountType === 'fixed') {
+            $discountAmount = $discountValue;
+        } elseif ($discountType === 'percentage') {
+            $discountAmount = ($totalPrice * $discountValue) / 100;
+        } elseif (isset($itemData['discount_amount'])) {
+            // للتوافق مع الكود القديم
+            $discountAmount = $itemData['discount_amount'];
+            $discountType = 'fixed'; // نعتبره fixed
+            $discountValue = $discountAmount;
+        }
+        
+        // صافي السعر بعد الخصم
+        $netPrice = $totalPrice - $discountAmount;
+        
+        return [
+            'total_price' => round($totalPrice, 2),
+            'discount_type' => $discountType,
+            'discount_value' => round($discountValue, 2),
+            'discount_amount' => round($discountAmount, 2),
+            'net_price' => round($netPrice, 2),
         ];
     }
 }

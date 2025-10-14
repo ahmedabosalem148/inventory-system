@@ -20,7 +20,9 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
     customer_name: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
-    status: 'pending'
+    status: 'pending',
+    is_transfer: false,
+    target_branch_id: ''
   });
 
   const [items, setItems] = useState([]);
@@ -30,8 +32,10 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
   // Autocomplete States
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(false);
   // Memoization caches
   const customersCache = useRef({});
   const productsCache = useRef({});
@@ -65,11 +69,29 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
         customer_name: voucher.customer_name || '',
         date: voucher.date,
         notes: voucher.notes || '',
-        status: voucher.status
+        status: voucher.status,
+        is_transfer: voucher.is_transfer || false,
+        target_branch_id: voucher.target_branch_id || ''
       });
       setItems(voucher.items || []);
     }
   }, [voucher]);
+
+  // Load branches on mount
+  useEffect(() => {
+    const fetchBranches = async () => {
+      setLoadingBranches(true);
+      try {
+        const response = await apiClient.get('/branches');
+        setBranches(response.data?.data || []);
+      } catch (error) {
+        console.error('Failed to load branches:', error);
+      } finally {
+        setLoadingBranches(false);
+      }
+    };
+    fetchBranches();
+  }, []);
 
   // Search customers with memoization & cancellation
   const handleSearchCustomers = (() => {
@@ -231,8 +253,15 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.customer_id) {
-      newErrors.customer_id = 'يجب اختيار العميل';
+    // For transfers, target branch is required instead of customer
+    if (formData.is_transfer) {
+      if (!formData.target_branch_id) {
+        newErrors.target_branch_id = 'يجب اختيار الفرع المستهدف';
+      }
+    } else {
+      if (!formData.customer_id) {
+        newErrors.customer_id = 'يجب اختيار العميل';
+      }
     }
 
     if (!formData.date) {
@@ -274,6 +303,9 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
       const totals = calculateTotals();
       const data = {
         ...formData,
+        is_transfer: formData.is_transfer,
+        target_branch_id: formData.is_transfer ? formData.target_branch_id : null,
+        customer_id: formData.is_transfer ? null : formData.customer_id,
         items,
         total_amount: totals.total
       };
