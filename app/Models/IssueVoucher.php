@@ -175,32 +175,27 @@ class IssueVoucher extends Model
             }
             // وإلا فهو بيع عادي
             else {
-                // تسجيل حركة المخزون العادية (خصم من المخزون)
+                // استخدام InventoryMovementService لتسجيل حركة المخزون بشكل صحيح
+                $movementService = app(\App\Services\InventoryMovementService::class);
+                
                 foreach ($this->items as $item) {
-                    \App\Models\InventoryMovement::create([
-                        'product_id' => $item->product_id,
-                        'branch_id' => $this->branch_id,
-                        'movement_type' => 'ISSUE',
-                        'qty_units' => -abs($item->quantity), // سالب للخصم
-                        'unit_price_snapshot' => $item->unit_price ?? 0,
-                        'ref_table' => 'issue_vouchers',
-                        'ref_id' => $this->id,
-                        'notes' => "بيع - إذن رقم {$this->voucher_number}",
-                    ]);
-
-                    // تحديث رصيد المخزون
-                    $stock = \App\Models\ProductBranchStock::firstOrCreate(
-                        [
-                            'product_id' => $item->product_id,
-                            'branch_id' => $this->branch_id,
-                        ],
-                        [
-                            'current_stock' => 0,
-                            'reserved_stock' => 0,
-                            'min_qty' => 0,
-                        ]
-                    );
-                    $stock->decrement('current_stock', abs($item->quantity));
+                    try {
+                        $movementService->recordIssue(
+                            productId: $item->product_id,
+                            branchId: $this->branch_id,
+                            quantity: abs($item->quantity),
+                            unitPrice: $item->unit_price ?? 0,
+                            issueVoucherId: $this->id,
+                            notes: "بيع - إذن رقم {$this->voucher_number}"
+                        );
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to record inventory movement', [
+                            'voucher_id' => $this->id,
+                            'item_id' => $item->id,
+                            'error' => $e->getMessage()
+                        ]);
+                        throw $e;
+                    }
                 }
 
                 // تسجيل في دفتر العميل (إذا كان هناك عميل)

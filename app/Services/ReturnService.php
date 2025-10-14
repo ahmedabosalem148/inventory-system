@@ -81,6 +81,7 @@ class ReturnService
 
     /**
      * Create RETURN inventory movement (adds to stock)
+     * الآن يستخدم InventoryMovementService للتسجيل الصحيح
      *
      * @param ReturnVoucher $voucher
      * @param \App\Models\ReturnVoucherItem $item
@@ -92,44 +93,33 @@ class ReturnService
         $item,
         User $user
     ): InventoryMovement {
-        return InventoryMovement::create([
-            'branch_id' => $voucher->branch_id,
-            'product_id' => $item->product_id,
-            'movement_type' => 'RETURN',
-            'qty_units' => $item->quantity, // Positive quantity (adds to stock)
-            'unit_price_snapshot' => $item->unit_price,
-            'ref_table' => 'return_vouchers',
-            'ref_id' => $voucher->id,
-            'movement_date' => $voucher->return_date,
-            'notes' => "ارتجاع رقم {$voucher->voucher_number}" . 
-                      ($voucher->reason ? " - {$voucher->reason}" : ''),
-            'created_by' => $user->id,
-        ]);
+        $movementService = app(\App\Services\InventoryMovementService::class);
+        
+        return $movementService->recordReturn(
+            productId: $item->product_id,
+            branchId: $voucher->branch_id,
+            quantity: $item->quantity,
+            unitPrice: $item->unit_price,
+            returnVoucherId: $voucher->id,
+            notes: "ارتجاع رقم {$voucher->voucher_number}" . 
+                   ($voucher->reason ? " - {$voucher->reason}" : '')
+        );
     }
 
     /**
-     * Update product branch stock balance (add returned quantity)
+     * Update product branch stock balance - الآن يتم التحديث من خلال InventoryMovementService
+     * هذه الميثود لم تعد مطلوبة لأن recordReturn() يحدث المخزون تلقائياً
      *
      * @param ReturnVoucher $voucher
      * @param \App\Models\ReturnVoucherItem $item
      * @return void
+     * @deprecated استخدم InventoryMovementService::recordReturn() بدلاً منه
      */
     protected function updateStockBalance(ReturnVoucher $voucher, $item): void
     {
-        $stock = ProductBranchStock::firstOrCreate(
-            [
-                'product_id' => $item->product_id,
-                'branch_id' => $voucher->branch_id,
-            ],
-            [
-                'current_stock' => 0,
-                'min_stock_level' => 0,
-            ]
-        );
-
-        // Add returned quantity to current stock
-        $stock->current_stock += $item->quantity;
-        $stock->save();
+        // لا حاجة لهذا الكود - InventoryMovementService يحدث المخزون تلقائياً
+        // نبقي الميثود للتوافق مع الكود القديم
+        return;
     }
 
     /**
