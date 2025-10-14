@@ -13,6 +13,8 @@ class IssueVoucher extends Model
         'branch_id',
         'issue_date',
         'notes',
+        'is_transfer',
+        'target_branch_id',
         'total_amount',
         'discount_type',
         'discount_value',
@@ -27,6 +29,7 @@ class IssueVoucher extends Model
 
     protected $casts = [
         'issue_date' => 'date',
+        'is_transfer' => 'boolean',
         'total_amount' => 'decimal:2',
         'discount_value' => 'decimal:2',
         'discount_amount' => 'decimal:2',
@@ -49,6 +52,14 @@ class IssueVoucher extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    /**
+     * العلاقة مع الفرع المستهدف (في حالة التحويل)
+     */
+    public function targetBranch()
+    {
+        return $this->belongsTo(Branch::class, 'target_branch_id');
     }
 
     /**
@@ -100,7 +111,7 @@ class IssueVoucher extends Model
     }
 
     /**
-     * اعتماد الإذن وإعطاء رقم تسلسلي + تسجيل في دفتر العميل
+     * اعتماد الإذن وإعطاء رقم تسلسلي + تسجيل في دفتر العميل أو التحويل بين الفروع
      */
     public function approve(User $user): self
     {
@@ -109,6 +120,42 @@ class IssueVoucher extends Model
         }
 
         return \DB::transaction(function () use ($user) {
+            // ✅ التحقق من توفر المخزون قبل الاعتماد
+            $stockValidation = app(\App\Services\StockValidationService::class);
+            
+            if ($this->is_transfer) {
+                // التحقق من إمكانية التحويل
+                $result = $stockValidation->canTransfer(
+                    $this->items,
+                    $this->branch_id,
+                    $this->target_branch_id
+                );
+                
+                if (!$result['can_transfer']) {
+                    throw new \Exception($result['message'] . "\n\n" . implode("\n", $result['validation']['messages'] ?? []));
+                }
+            } else {
+                // التحقق من إمكانية الصرف
+                $result = $stockValidation->canIssueVoucher($this->items, $this->branch_id);
+                
+                if (!$result['can_issue']) {
+                    $errorMessage = $result['message'] . "\n\n";
+                    $errorMessage .= implode("\n", $result['validation']['messages'] ?? []);
+                    
+                    // إضافة الاقتراحات إذا وجدت
+                    if (!empty($result['suggestions'])) {
+                        $errorMessage .= "\n\nالاقتراحات البديلة:\n";
+                        foreach ($result['suggestions'] as $productId => $suggestions) {
+                            foreach ($suggestions as $suggestion) {
+                                $errorMessage .= "- " . $suggestion['message'] . "\n";
+                            }
+                        }
+                    }
+                    
+                    throw new \Exception($errorMessage);
+                }
+            }
+            
             // إعطاء رقم تسلسلي
             $sequencerService = app(\App\Services\SequencerService::class);
             $this->voucher_number = $sequencerService->getNextSequence('issue_vouchers');
@@ -120,40 +167,76 @@ class IssueVoucher extends Model
             
             $this->save();
 
-            // تسجيل في دفتر العميل (إذا كان هناك عميل)
-            if ($this->customer_id) {
-                $ledgerService = app(\App\Services\CustomerLedgerService::class);
-                
-                // حساب المبلغ النهائي
-                $totalAmount = $this->net_total ?? $this->total_amount ?? 0;
-                
-                // تحديد نوع البيع (نقدي أو آجل) من الملاحظات أو الحقول
-                $isCashSale = stripos($this->notes ?? '', 'نقدي') !== false;
-                
-                // قيد "علية" للبيع (سواء نقدي أو آجل)
-                $ledgerService->addEntry(
-                    customerId: $this->customer_id,
-                    description: "فاتورة رقم {$this->voucher_number}",
-                    debitAliah: $totalAmount, // علية - مديونية على العميل
-                    creditLah: 0,
-                    refTable: 'issue_vouchers',
-                    refId: $this->id,
-                    notes: $this->notes,
-                    createdBy: $user->id
-                );
-                
-                // إذا كان البيع نقدي، نضيف قيد "له" فوري
-                if ($isCashSale) {
+            // إذا كان الإذن تحويل بين فروع
+            if ($this->is_transfer) {
+                $transferService = app(\App\Services\TransferService::class);
+                $transferService->createTransfer($this, $user);
+            }
+            // وإلا فهو بيع عادي
+            else {
+                // تسجيل حركة المخزون العادية (خصم من المخزون)
+                foreach ($this->items as $item) {
+                    \App\Models\InventoryMovement::create([
+                        'product_id' => $item->product_id,
+                        'branch_id' => $this->branch_id,
+                        'movement_type' => 'ISSUE',
+                        'qty_units' => -abs($item->quantity), // سالب للخصم
+                        'unit_price_snapshot' => $item->unit_price ?? 0,
+                        'ref_table' => 'issue_vouchers',
+                        'ref_id' => $this->id,
+                        'notes' => "بيع - إذن رقم {$this->voucher_number}",
+                    ]);
+
+                    // تحديث رصيد المخزون
+                    $stock = \App\Models\ProductBranchStock::firstOrCreate(
+                        [
+                            'product_id' => $item->product_id,
+                            'branch_id' => $this->branch_id,
+                        ],
+                        [
+                            'current_stock' => 0,
+                            'reserved_stock' => 0,
+                            'min_qty' => 0,
+                        ]
+                    );
+                    $stock->decrement('current_stock', abs($item->quantity));
+                }
+
+                // تسجيل في دفتر العميل (إذا كان هناك عميل)
+                if ($this->customer_id) {
+                    $ledgerService = app(\App\Services\CustomerLedgerService::class);
+                    
+                    // حساب المبلغ النهائي
+                    $totalAmount = $this->net_total ?? $this->total_amount ?? 0;
+                    
+                    // تحديد نوع البيع (نقدي أو آجل) من الملاحظات أو الحقول
+                    $isCashSale = stripos($this->notes ?? '', 'نقدي') !== false;
+                    
+                    // قيد "علية" للبيع (سواء نقدي أو آجل)
                     $ledgerService->addEntry(
                         customerId: $this->customer_id,
-                        description: "سداد نقدي لفاتورة رقم {$this->voucher_number}",
-                        debitAliah: 0,
-                        creditLah: $totalAmount, // له - دفعة نقدية
+                        description: "فاتورة رقم {$this->voucher_number}",
+                        debitAliah: $totalAmount, // علية - مديونية على العميل
+                        creditLah: 0,
                         refTable: 'issue_vouchers',
                         refId: $this->id,
-                        notes: 'سداد نقدي فوري',
+                        notes: $this->notes,
                         createdBy: $user->id
                     );
+                    
+                    // إذا كان البيع نقدي، نضيف قيد "له" فوري
+                    if ($isCashSale) {
+                        $ledgerService->addEntry(
+                            customerId: $this->customer_id,
+                            description: "سداد نقدي لفاتورة رقم {$this->voucher_number}",
+                            debitAliah: 0,
+                            creditLah: $totalAmount, // له - دفعة نقدية
+                            refTable: 'issue_vouchers',
+                            refId: $this->id,
+                            notes: 'سداد نقدي فوري',
+                            createdBy: $user->id
+                        );
+                    }
                 }
             }
 
