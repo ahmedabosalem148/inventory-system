@@ -27,6 +27,7 @@ class ProductBranch extends Model
         'branch_id',
         'current_stock',
         'reserved_stock',
+        'min_qty',
     ];
 
     /**
@@ -37,6 +38,7 @@ class ProductBranch extends Model
     protected $casts = [
         'current_stock' => 'integer',
         'reserved_stock' => 'integer',
+        'min_qty' => 'integer',
     ];
 
     /**
@@ -63,6 +65,33 @@ class ProductBranch extends Model
     public function getAvailableStockAttribute(): int
     {
         return $this->current_stock - $this->reserved_stock;
+    }
+
+    /**
+     * Check if current stock is below minimum quantity.
+     *
+     * @return bool
+     */
+    public function getIsLowStockAttribute(): bool
+    {
+        return $this->current_stock <= $this->min_qty;
+    }
+
+    /**
+     * Get stock status (OK, Low, Critical).
+     *
+     * @return string
+     */
+    public function getStockStatusAttribute(): string
+    {
+        if ($this->current_stock <= 0) {
+            return 'out_of_stock';
+        } elseif ($this->current_stock <= $this->min_qty) {
+            return 'low_stock';
+        } elseif ($this->current_stock <= ($this->min_qty * 1.5)) {
+            return 'warning';
+        }
+        return 'ok';
     }
 
     /**

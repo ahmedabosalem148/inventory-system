@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\InventoryMovementController;
 use App\Http\Controllers\Api\V1\IssueVoucherController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
@@ -97,6 +98,10 @@ Route::prefix('v1')
     // Voucher actions
     Route::post('issue-vouchers/{voucher}/print', [IssueVoucherController::class, 'print'])
         ->name('api.issue-vouchers.print');
+    
+    // Issue vouchers statistics
+    Route::get('issue-vouchers-stats', [IssueVoucherController::class, 'stats'])
+        ->name('api.issue-vouchers.stats');
     Route::post('return-vouchers/{voucher}/print', [ReturnVoucherController::class, 'print'])
         ->name('api.return-vouchers.print');
 
@@ -111,6 +116,25 @@ Route::prefix('v1')
         Route::get('cleared', [PaymentController::class, 'clearedCheques'])->name('cleared');
         Route::post('{cheque}/clear', [PaymentController::class, 'clearCheque'])->name('clear');
         Route::post('{cheque}/bounce', [PaymentController::class, 'bounceСheque'])->name('bounce');
+    });
+
+    // ========================================================================
+    // Inventory Movements
+    // ========================================================================
+    Route::prefix('inventory-movements')->name('api.inventory-movements.')->group(function () {
+        // List and view movements
+        Route::get('/', [InventoryMovementController::class, 'index'])->name('index');
+        Route::get('{inventoryMovement}', [InventoryMovementController::class, 'show'])->name('show');
+        
+        // Stock operations
+        Route::post('add', [InventoryMovementController::class, 'addStock'])->name('add');
+        Route::post('issue', [InventoryMovementController::class, 'issueStock'])->name('issue');
+        Route::post('transfer', [InventoryMovementController::class, 'transferStock'])->name('transfer');
+        Route::post('adjust', [InventoryMovementController::class, 'adjustStock'])->name('adjust');
+        
+        // Reports and summaries
+        Route::get('reports/summary', [InventoryMovementController::class, 'summary'])->name('summary');
+        Route::get('reports/low-stock', [InventoryMovementController::class, 'lowStock'])->name('low-stock');
     });
 
     // ========================================================================

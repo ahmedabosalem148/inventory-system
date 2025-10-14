@@ -23,11 +23,11 @@ class Customer extends Model
     ];
 
     /**
-     * العلاقة مع دفتر الحساب (سيُضاف لاحقاً في TASK-012)
+     * العلاقة مع دفتر الحساب (TASK-004)
      */
     public function ledgerEntries()
     {
-        return $this->hasMany(CustomerLedger::class);
+        return $this->hasMany(CustomerLedgerEntry::class);
     }
 
     /**

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, User, Package, Calendar, Hash } from 'lucide-react';
 import { Button, Input, Badge } from '../../atoms';
 import { Autocomplete } from '../../molecules';
@@ -17,6 +17,7 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
   // Form State
   const [formData, setFormData] = useState({
     customer_id: '',
+    customer_name: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
     status: 'pending'
@@ -31,6 +32,12 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
   const [products, setProducts] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  // Memoization caches
+  const customersCache = useRef({});
+  const productsCache = useRef({});
+  // AbortControllers for cancellation
+  const customersAbort = useRef(null);
+  const productsAbort = useRef(null);
 
   // Mock data for customers (TODO: Replace with API)
   const mockCustomers = [
@@ -55,6 +62,7 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
     if (voucher) {
       setFormData({
         customer_id: voucher.customer_id,
+        customer_name: voucher.customer_name || '',
         date: voucher.date,
         notes: voucher.notes || '',
         status: voucher.status
@@ -63,79 +71,97 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
     }
   }, [voucher]);
 
-  // Search customers
-  const handleSearchCustomers = async (searchTerm) => {
-    setLoadingCustomers(true);
-    try {
-      const response = await apiClient.get('/customers', {
-        params: { search: searchTerm, per_page: 20 }
-      });
-      
-      console.log('✅ Customers API Response:', response.data);
-      
-      if (response.data && response.data.data) {
-        setCustomers(response.data.data);
-      } else {
-        // Fallback to mock data if API fails
-        const filtered = mockCustomers.filter(c =>
-          c.name.includes(searchTerm) || c.phone.includes(searchTerm)
-        );
-        setCustomers(filtered);
+  // Search customers with memoization & cancellation
+  const handleSearchCustomers = (() => {
+    let debounceTimer;
+    return async (searchTerm) => {
+      if (!searchTerm) {
+        setCustomers([]);
+        return;
       }
-      
-    } catch (error) {
-      console.error('❌ Error searching customers:', error);
-      
-      // Fallback to mock data
-      const filtered = mockCustomers.filter(c =>
-        c.name.includes(searchTerm) || c.phone.includes(searchTerm)
-      );
-      setCustomers(filtered);
-    } finally {
-      setLoadingCustomers(false);
-    }
-  };
+      // Memoization: return cached results if available
+      if (customersCache.current[searchTerm]) {
+        setCustomers(customersCache.current[searchTerm]);
+        return;
+      }
+      // Debounce: clear previous timer
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        setLoadingCustomers(true);
+        // Cancel previous request
+        if (customersAbort.current) customersAbort.current.abort();
+        customersAbort.current = new AbortController();
+        try {
+          const response = await apiClient.get('/customers', {
+            params: { search: searchTerm, per_page: 20 },
+            signal: customersAbort.current.signal
+          });
+          const result = response.data?.data || [];
+          setCustomers(result);
+          customersCache.current[searchTerm] = result;
+        } catch (error) {
+          if (error.code === 'ERR_CANCELED' || error.name === 'CanceledError') return;
+          // Fallback to mock data
+          const filtered = mockCustomers.filter(c =>
+            c.name.includes(searchTerm) || c.phone.includes(searchTerm)
+          );
+          setCustomers(filtered);
+          customersCache.current[searchTerm] = filtered;
+        } finally {
+          setLoadingCustomers(false);
+        }
+      }, 450); // Debounce 450ms
+    };
+  })();
 
-  // Search products
-  const handleSearchProducts = async (searchTerm) => {
-    setLoadingProducts(true);
-    try {
-      const response = await apiClient.get('/products', {
-        params: { search: searchTerm, per_page: 20 }
-      });
-      
-      console.log('✅ Products API Response:', response.data);
-      
-      if (response.data && response.data.data) {
-        // تحويل البيانات لتناسب الـ form
-        const formattedProducts = response.data.data.map(product => ({
-          id: product.id,
-          name: product.name,
-          unit: product.unit,
-          price: product.sale_price,
-          stock: product.min_stock // placeholder حتى نحصل على stock فعلي
-        }));
-        setProducts(formattedProducts);
-      } else {
-        // Fallback to mock data if API fails
-        const filtered = mockProducts.filter(p =>
-          p.name.includes(searchTerm)
-        );
-        setProducts(filtered);
+  // Search products with memoization & cancellation
+  const handleSearchProducts = (() => {
+    let debounceTimer;
+    return async (searchTerm) => {
+      if (!searchTerm) {
+        setProducts([]);
+        return;
       }
-      
-    } catch (error) {
-      console.error('❌ Error searching products:', error);
-      
-      // Fallback to mock data
-      const filtered = mockProducts.filter(p =>
-        p.name.includes(searchTerm)
-      );
-      setProducts(filtered);
-    } finally {
-      setLoadingProducts(false);
-    }
-  };
+      // Memoization: return cached results if available
+      if (productsCache.current[searchTerm]) {
+        setProducts(productsCache.current[searchTerm]);
+        return;
+      }
+      // Debounce: clear previous timer
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        setLoadingProducts(true);
+        // Cancel previous request
+        if (productsAbort.current) productsAbort.current.abort();
+        productsAbort.current = new AbortController();
+        try {
+          const response = await apiClient.get('/products', {
+            params: { search: searchTerm, per_page: 20 },
+            signal: productsAbort.current.signal
+          });
+          const result = (response.data?.data || []).map(product => ({
+            id: product.id,
+            name: product.name,
+            unit: product.unit,
+            price: product.sale_price,
+            stock: product.min_stock
+          }));
+          setProducts(result);
+          productsCache.current[searchTerm] = result;
+        } catch (error) {
+          if (error.code === 'ERR_CANCELED' || error.name === 'CanceledError') return;
+          // Fallback to mock data
+          const filtered = mockProducts.filter(p =>
+            p.name.includes(searchTerm)
+          );
+          setProducts(filtered);
+          productsCache.current[searchTerm] = filtered;
+        } finally {
+          setLoadingProducts(false);
+        }
+      }, 450); // Debounce 450ms
+    };
+  })();
 
   // Add product to items
   const handleAddProduct = (product) => {
@@ -292,7 +318,11 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
                   options={customers}
                   onSearch={handleSearchCustomers}
                   onSelect={(customer) => {
-                    setFormData({ ...formData, customer_id: customer?.id || '' });
+                    setFormData({ 
+                      ...formData, 
+                      customer_id: customer?.id || '', 
+                      customer_name: customer?.name || '' 
+                    });
                     setErrors({ ...errors, customer_id: '' });
                   }}
                   getOptionLabel={(customer) => customer.name}

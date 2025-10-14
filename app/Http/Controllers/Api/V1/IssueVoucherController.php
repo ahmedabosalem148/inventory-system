@@ -211,6 +211,70 @@ class IssueVoucherController extends Controller
     }
 
     /**
+     * إحصائيات أذونات الصرف
+     */
+    public function stats(Request $request)
+    {
+        $user = $request->user();
+        $branchId = null;
+
+        // Determine branch context
+        if (!$user->hasRole('super-admin')) {
+            $activeBranch = $user->getActiveBranch();
+            if (!$activeBranch) {
+                return response()->json([
+                    'message' => 'لا يوجد فرع نشط للمستخدم'
+                ], 403);
+            }
+            $branchId = $activeBranch->id;
+        } elseif ($request->filled('branch_id')) {
+            $branchId = $request->branch_id;
+        }
+
+        $query = IssueVoucher::query();
+        
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        // Total vouchers
+        $totalVouchers = $query->count();
+
+        // Today's vouchers
+        $todayVouchers = (clone $query)->whereDate('issue_date', today())->count();
+
+        // Total amount
+        $totalAmount = $query->sum('net_total') ?? 0;
+
+        // Pending vouchers
+        $pendingVouchers = (clone $query)->where('status', 'pending')->count();
+
+        // This month stats
+        $thisMonthVouchers = (clone $query)
+            ->whereYear('issue_date', now()->year)
+            ->whereMonth('issue_date', now()->month)
+            ->count();
+
+        $thisMonthAmount = (clone $query)
+            ->whereYear('issue_date', now()->year)
+            ->whereMonth('issue_date', now()->month)
+            ->sum('net_total') ?? 0;
+
+        return response()->json([
+            'data' => [
+                'totalVouchers' => $totalVouchers,
+                'todayVouchers' => $todayVouchers,
+                'totalAmount' => $totalAmount,
+                'pendingVouchers' => $pendingVouchers,
+                'thisMonthVouchers' => $thisMonthVouchers,
+                'thisMonthAmount' => $thisMonthAmount,
+                'averageVoucherValue' => $totalVouchers > 0 ? $totalAmount / $totalVouchers : 0,
+                'branch_id' => $branchId
+            ]
+        ]);
+    }
+
+    /**
      * حذف (إلغاء) إذن صرف
      * Only users with full_access can cancel vouchers (or admin)
      */

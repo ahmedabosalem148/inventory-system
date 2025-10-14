@@ -43,8 +43,11 @@ class ProductResource extends JsonResource
                     return [
                         'branch_id' => $stock->branch_id,
                         'branch_name' => $stock->branch?->name,
+                        'branch_code' => $stock->branch?->code,
                         'current_stock' => $stock->current_stock,
-                        'is_low_stock' => $stock->current_stock < $this->min_stock,
+                        'min_qty' => $stock->min_qty ?? 0,
+                        'is_low_stock' => $stock->current_stock <= ($stock->min_qty ?? 0),
+                        'stock_status' => $stock->stock_status ?? 'ok',
                     ];
                 });
             }),

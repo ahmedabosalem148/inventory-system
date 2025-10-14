@@ -10,11 +10,20 @@ class Sequence extends Model
         'entity_type',
         'year',
         'last_number',
+        'prefix',
+        'min_value',
+        'max_value',
+        'increment_by',
+        'auto_reset',
     ];
 
     protected $casts = [
         'year' => 'integer',
         'last_number' => 'integer',
+        'min_value' => 'integer',
+        'max_value' => 'integer',
+        'increment_by' => 'integer',
+        'auto_reset' => 'boolean',
     ];
 
     /**

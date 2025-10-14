@@ -217,7 +217,14 @@ const IssueVoucherDetailsPage = () => {
                         <div className="flex items-center space-x-2 space-x-reverse">
                           <User className="w-4 h-4 text-gray-400" />
                           <span className="text-gray-600">العميل:</span>
-                          <span className="font-medium">{voucher.customer.name}</span>
+                          <button
+                            onClick={() => navigate(`/customers/${voucher.customer.id}/profile`)}
+                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200 flex items-center gap-1 group relative"
+                            title={`عرض ملف العميل: ${voucher.customer.name}`}
+                          >
+                            <span>{voucher.customer.name}</span>
+                            <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                          </button>
                         </div>
                       )}
                     </div>

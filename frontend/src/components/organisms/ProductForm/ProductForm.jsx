@@ -22,7 +22,10 @@ const ProductForm = ({
     min_stock: '',
     pack_size: '',
     reorder_level: '',
-    is_active: true
+    is_active: true,
+    branch_min_qty_factory: '',
+    branch_min_qty_ataba: '',
+    branch_min_qty_imbaba: ''
   });
   
   const [errors, setErrors] = useState({});
@@ -52,6 +55,12 @@ const ProductForm = ({
   // Initialize form data when product changes
   useEffect(() => {
     if (product) {
+      // Extract branch stock data if available
+      const branchStocks = product.branch_stocks || [];
+      const factoryStock = branchStocks.find(bs => bs.branch?.code === 'FAC');
+      const atabaStock = branchStocks.find(bs => bs.branch?.code === 'ATB');
+      const imbabaStock = branchStocks.find(bs => bs.branch?.code === 'IMB');
+
       setFormData({
         name: product.name || '',
         description: product.description || '',
@@ -62,7 +71,10 @@ const ProductForm = ({
         min_stock: product.min_stock || '',
         pack_size: product.pack_size || '',
         reorder_level: product.reorder_level || '',
-        is_active: product.is_active !== undefined ? product.is_active : true
+        is_active: product.is_active !== undefined ? product.is_active : true,
+        branch_min_qty_factory: factoryStock?.min_qty || '',
+        branch_min_qty_ataba: atabaStock?.min_qty || '',
+        branch_min_qty_imbaba: imbabaStock?.min_qty || ''
       });
     } else {
       // Reset form for new product
@@ -76,7 +88,10 @@ const ProductForm = ({
         min_stock: '',
         pack_size: '1',
         reorder_level: '',
-        is_active: true
+        is_active: true,
+        branch_min_qty_factory: '',
+        branch_min_qty_ataba: '',
+        branch_min_qty_imbaba: ''
       });
     }
     setErrors({});
@@ -346,7 +361,7 @@ const ProductForm = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    الحد الأدنى للمخزون
+                    الحد الأدنى للمخزون (عام)
                   </label>
                   <Input
                     name="min_stock"
@@ -398,6 +413,68 @@ const ProductForm = ({
                     المنتج نشط ومتاح للبيع
                   </span>
                 </label>
+              </div>
+            </Card>
+
+            {/* Branch Stock Management */}
+            <Card className="p-4">
+              <h3 className="font-semibold text-gray-900 mb-4">الحد الأدنى لكل فرع</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      المصنع - الحد الأدنى
+                    </label>
+                    <Input
+                      name="branch_min_qty_factory"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={formData.branch_min_qty_factory || ''}
+                      onChange={handleChange}
+                      placeholder="0"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      العتبة - الحد الأدنى
+                    </label>
+                    <Input
+                      name="branch_min_qty_ataba"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={formData.branch_min_qty_ataba || ''}
+                      onChange={handleChange}
+                      placeholder="0"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      إمبابة - الحد الأدنى
+                    </label>
+                    <Input
+                      name="branch_min_qty_imbaba"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={formData.branch_min_qty_imbaba || ''}
+                      onChange={handleChange}
+                      placeholder="0"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    <strong>ملاحظة:</strong> هذه الحدود الدنيا سيتم استخدامها لتنبيه النقص في المخزون لكل فرع منفصل.
+                  </p>
+                </div>
               </div>
             </Card>
 

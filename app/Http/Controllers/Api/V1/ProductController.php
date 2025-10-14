@@ -88,6 +88,9 @@ class ProductController extends Controller
             'initial_stock' => 'nullable|array',
             'initial_stock.*.branch_id' => 'required|exists:branches,id',
             'initial_stock.*.quantity' => 'required|integer|min:0',
+            'branch_min_qty_factory' => 'nullable|integer|min:0',
+            'branch_min_qty_ataba' => 'nullable|integer|min:0',
+            'branch_min_qty_imbaba' => 'nullable|integer|min:0',
         ], [
             'category_id.required' => __('product.validation.category_id.required'),
             'name.required' => __('product.validation.name.required'),
@@ -104,23 +107,37 @@ class ProductController extends Controller
             // إنشاء المنتج
             $product = Product::create($validated);
 
-            // إضافة المخزون الأولي
-            if ($request->filled('initial_stock')) {
-                foreach ($request->initial_stock as $stock) {
-                    // التحقق من صلاحية المستخدم على كل مخزن
-                    if (!$user->hasRole('super-admin') && !$user->hasFullAccessToBranch($stock['branch_id'])) {
-                        DB::rollBack();
-                        $branch = \App\Models\Branch::find($stock['branch_id']);
-                        return response()->json([
-                            'message' => 'ليس لديك صلاحية كاملة لإضافة مخزون في الفرع: ' . ($branch ? $branch->name : $stock['branch_id']),
-                        ], 403);
-                    }
-                    
-                    $product->branchStocks()->create([
-                        'branch_id' => $stock['branch_id'],
-                        'current_stock' => $stock['quantity'],
-                    ]);
+            // إضافة المخزون الأولي والحدود الدنيا للفروع
+            $branches = \App\Models\Branch::all();
+            $branchMinData = [
+                'FAC' => $request->branch_min_qty_factory ?? 0,
+                'ATB' => $request->branch_min_qty_ataba ?? 0,
+                'IMB' => $request->branch_min_qty_imbaba ?? 0,
+            ];
+
+            foreach ($branches as $branch) {
+                // التحقق من صلاحية المستخدم على كل مخزن
+                if (!$user->hasRole('super-admin') && !$user->hasFullAccessToBranch($branch->id)) {
+                    continue; // تجاهل الفروع التي لا يملك المستخدم صلاحية عليها
                 }
+
+                // البحث عن المخزون الأولي لهذا الفرع
+                $initialStock = 0;
+                if ($request->filled('initial_stock')) {
+                    foreach ($request->initial_stock as $stock) {
+                        if ($stock['branch_id'] == $branch->id) {
+                            $initialStock = $stock['quantity'];
+                            break;
+                        }
+                    }
+                }
+
+                // إنشاء سجل المخزون للفرع مع الحد الأدنى
+                $product->branchStocks()->create([
+                    'branch_id' => $branch->id,
+                    'current_stock' => $initialStock,
+                    'min_qty' => $branchMinData[$branch->code] ?? 0,
+                ]);
             }
 
             DB::commit();
@@ -187,6 +204,9 @@ class ProductController extends Controller
             'min_stock' => 'sometimes|integer|min:0',
             'reorder_level' => 'nullable|integer|min:0',
             'is_active' => 'sometimes|boolean',
+            'branch_min_qty_factory' => 'nullable|integer|min:0',
+            'branch_min_qty_ataba' => 'nullable|integer|min:0',
+            'branch_min_qty_imbaba' => 'nullable|integer|min:0',
         ], [
             'category_id.exists' => 'التصنيف غير موجود',
             'name.unique' => 'اسم المنتج موجود بالفعل',
@@ -205,12 +225,50 @@ class ProductController extends Controller
             }
         }
 
-        $product->update($validated);
+        DB::beginTransaction();
+        try {
+            // تحديث بيانات المنتج الأساسية
+            $productData = collect($validated)->except([
+                'branch_min_qty_factory', 
+                'branch_min_qty_ataba', 
+                'branch_min_qty_imbaba'
+            ])->toArray();
+            
+            $product->update($productData);
 
-        return response()->json([
-            'message' => __('product.messages.updated'),
-            'data' => ProductResource::make($product->fresh(['category', 'branchStocks.branch'])),
-        ], 200);
+            // تحديث الحدود الدنيا للفروع إذا تم إرسالها
+            if ($request->hasAny(['branch_min_qty_factory', 'branch_min_qty_ataba', 'branch_min_qty_imbaba'])) {
+                $branchMinData = [
+                    'FAC' => $request->branch_min_qty_factory,
+                    'ATB' => $request->branch_min_qty_ataba,
+                    'IMB' => $request->branch_min_qty_imbaba,
+                ];
+
+                $branches = \App\Models\Branch::all();
+                foreach ($branches as $branch) {
+                    if (isset($branchMinData[$branch->code]) && $branchMinData[$branch->code] !== null) {
+                        $product->branchStocks()
+                            ->where('branch_id', $branch->id)
+                            ->update(['min_qty' => $branchMinData[$branch->code]]);
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => __('product.messages.updated'),
+                'data' => ProductResource::make($product->fresh(['category', 'branchStocks.branch'])),
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'message' => 'خطأ في تحديث المنتج',
+                'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
+            ], 500);
+        }
     }
 
     /**

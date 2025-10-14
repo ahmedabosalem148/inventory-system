@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
-use App\Models\ProductBranchStock;
+use App\Models\ProductBranch;
 use App\Models\InventoryMovement;
 use Illuminate\Support\Facades\DB;
 
@@ -150,7 +150,7 @@ class InventoryService
      */
     public function getCurrentStock(int $productId, int $branchId): float
     {
-        $productBranch = ProductBranchStock::where('product_id', $productId)
+        $productBranch = ProductBranch::where('product_id', $productId)
             ->where('branch_id', $branchId)
             ->first();
 
@@ -182,13 +182,15 @@ class InventoryService
      */
     protected function updateStock(int $productId, int $branchId, float $change): void
     {
-        $productBranch = ProductBranchStock::firstOrCreate(
+        $productBranch = ProductBranch::firstOrCreate(
             [
                 'product_id' => $productId,
                 'branch_id' => $branchId,
             ],
             [
-                'qty_units' => 0,
+                'current_stock' => 0,
+                'reserved_stock' => 0,
+                'min_qty' => 0,
             ]
         );
 
@@ -204,11 +206,176 @@ class InventoryService
      */
     public function getProductsBelowReorderLevel(int $branchId)
     {
-        return ProductBranchStock::where('branch_id', $branchId)
+        return ProductBranch::where('branch_id', $branchId)
             ->with('product')
             ->get()
             ->filter(function ($pb) {
                 return $pb->current_stock < $pb->product->reorder_level;
             });
+    }
+
+    /**
+     * Get products below minimum quantity for a branch (using new min_qty field)
+     *
+     * @param int $branchId
+     * @return \Illuminate\Support\Collection
+     */
+    public function getProductsBelowMinQuantity(int $branchId)
+    {
+        return ProductBranch::where('branch_id', $branchId)
+            ->with('product')
+            ->get()
+            ->filter(function ($pb) {
+                return $pb->is_low_stock; // Uses the attribute we defined
+            });
+    }
+
+    /**
+     * Check if product is below minimum quantity in branch
+     *
+     * @param int $productId
+     * @param int $branchId
+     * @return bool
+     */
+    public function isBelowMinQuantity(int $productId, int $branchId): bool
+    {
+        $productBranch = ProductBranch::where('product_id', $productId)
+            ->where('branch_id', $branchId)
+            ->first();
+
+        return $productBranch ? $productBranch->is_low_stock : false;
+    }
+
+    /**
+     * Get stock status for product in branch
+     *
+     * @param int $productId
+     * @param int $branchId
+     * @return string (ok|warning|low_stock|out_of_stock)
+     */
+    public function getStockStatus(int $productId, int $branchId): string
+    {
+        $productBranch = ProductBranch::where('product_id', $productId)
+            ->where('branch_id', $branchId)
+            ->first();
+
+        return $productBranch ? $productBranch->stock_status : 'out_of_stock';
+    }
+
+    /**
+     * Add product to branch (increase stock)
+     *
+     * @param int $productId
+     * @param int $branchId
+     * @param float $quantity
+     * @param string $notes
+     * @param array $metadata
+     * @return InventoryMovement
+     */
+    public function addProduct(
+        int $productId,
+        int $branchId,
+        float $quantity,
+        string $notes,
+        array $metadata = []
+    ): InventoryMovement {
+        return DB::transaction(function () use ($productId, $branchId, $quantity, $notes, $metadata) {
+            // Get product for pack size calculation
+            $product = Product::findOrFail($productId);
+            
+            // Convert to units if pack size is specified
+            $unitsToAdd = $quantity;
+            if (isset($metadata['in_packs']) && $metadata['in_packs'] && $product->pack_size > 0) {
+                $unitsToAdd = $quantity * $product->pack_size;
+            }
+
+            // Increase stock
+            $this->updateStock($productId, $branchId, $unitsToAdd);
+
+            // Record movement
+            return InventoryMovement::create([
+                'product_id' => $productId,
+                'branch_id' => $branchId,
+                'movement_type' => 'ADD',
+                'qty_units' => $unitsToAdd,
+                'unit_price_snapshot' => $metadata['unit_price'] ?? $product->purchase_price,
+                'ref_table' => $metadata['reference_type'] ?? null,
+                'ref_id' => $metadata['reference_id'] ?? null,
+                'notes' => $notes,
+            ]);
+        });
+    }
+
+    /**
+     * Bulk update stock for multiple products (for stock adjustments)
+     *
+     * @param array $adjustments [['product_id' => 1, 'branch_id' => 1, 'new_quantity' => 50, 'notes' => '...'], ...]
+     * @return array of InventoryMovements
+     */
+    public function bulkStockAdjustment(array $adjustments): array
+    {
+        return DB::transaction(function () use ($adjustments) {
+            $movements = [];
+
+            foreach ($adjustments as $adjustment) {
+                $productId = $adjustment['product_id'];
+                $branchId = $adjustment['branch_id'];
+                $newQuantity = $adjustment['new_quantity'];
+                $notes = $adjustment['notes'] ?? 'Stock Adjustment';
+
+                $currentStock = $this->getCurrentStock($productId, $branchId);
+                $difference = $newQuantity - $currentStock;
+
+                if ($difference != 0) {
+                    // Update the stock
+                    $this->updateStock($productId, $branchId, $difference);
+
+                    // Record the movement
+                    $movements[] = InventoryMovement::create([
+                        'product_id' => $productId,
+                        'branch_id' => $branchId,
+                        'movement_type' => $difference > 0 ? 'ADD' : 'ISSUE',
+                        'qty_units' => abs($difference),
+                        'ref_table' => 'stock_adjustment',
+                        'ref_id' => null,
+                        'notes' => $notes . " (من {$currentStock} إلى {$newQuantity})",
+                    ]);
+                }
+            }
+
+            return $movements;
+        });
+    }
+
+    /**
+     * Get inventory summary for dashboard
+     *
+     * @param int|null $branchId
+     * @return array
+     */
+    public function getInventorySummary(?int $branchId = null): array
+    {
+        $query = ProductBranch::with('product');
+        
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        $stocks = $query->get();
+        
+        $totalProducts = $stocks->count();
+        $lowStockCount = $stocks->filter(fn($stock) => $stock->is_low_stock)->count();
+        $outOfStockCount = $stocks->filter(fn($stock) => $stock->current_stock <= 0)->count();
+        $totalValue = $stocks->sum(function($stock) {
+            return $stock->current_stock * $stock->product->purchase_price;
+        });
+
+        return [
+            'total_products' => $totalProducts,
+            'low_stock_count' => $lowStockCount,
+            'out_of_stock_count' => $outOfStockCount,
+            'total_inventory_value' => $totalValue,
+            'low_stock_percentage' => $totalProducts > 0 ? round(($lowStockCount / $totalProducts) * 100, 2) : 0,
+        ];
     }
 }
