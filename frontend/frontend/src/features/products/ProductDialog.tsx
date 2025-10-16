@@ -24,6 +24,7 @@ export function ProductDialog({ product, onClose }: ProductDialogProps) {
   // Form state
   const [formData, setFormData] = useState<CreateProductInput>({
     name: '',
+    brand: '',
     sku: '',
     description: '',
     unit: 'قطعة',
@@ -55,6 +56,7 @@ export function ProductDialog({ product, onClose }: ProductDialogProps) {
       
       setFormData({
         name: product.name,
+        brand: product.brand || '',
         sku: product.sku,
         description: product.description || '',
         unit: product.unit,
@@ -171,6 +173,14 @@ export function ProductDialog({ product, onClose }: ProductDialogProps) {
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="أدخل اسم المنتج"
               required
+            />
+
+            {/* Brand */}
+            <Input
+              label="الماركة / العلامة التجارية"
+              value={formData.brand || ''}
+              onChange={(e) => handleChange('brand', e.target.value)}
+              placeholder="مثال: Samsung, LG, Philips (اختياري)"
             />
 
             {/* SKU & Barcode */}

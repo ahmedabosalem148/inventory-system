@@ -157,6 +157,16 @@ export function ProductsPage() {
       ),
     },
     {
+      key: 'brand',
+      header: 'الماركة',
+      sortable: true,
+      render: (row: Product) => (
+        <span className="text-gray-600">
+          {row.brand || '-'}
+        </span>
+      ),
+    },
+    {
       key: 'category',
       header: 'الفئة',
       sortable: true,

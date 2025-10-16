@@ -77,6 +77,7 @@ export interface ProductCategory {
 export interface Product {
   id: number
   name: string
+  brand?: string
   description?: string
   sku: string
   unit: string
@@ -97,6 +98,7 @@ export interface Product {
 
 export interface ProductFilters {
   search?: string
+  brand?: string
   category?: string
   is_active?: boolean
   low_stock?: boolean
@@ -105,6 +107,7 @@ export interface ProductFilters {
 
 export interface CreateProductInput {
   name: string
+  brand?: string
   description?: string
   sku: string
   unit: string
