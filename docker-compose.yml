@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # Frontend - React + Vite
+  frontend:
+    build:
+      context: ./frontend/frontend
+      dockerfile: Dockerfile.dev
+    container_name: inventory-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+    networks:
+      - inventory-network
+    stdin_open: true
+    tty: true
+
+  # Backend - Laravel + PHP 8.2
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: inventory-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    environment:
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=inventory_db
+      - DB_USERNAME=inventory_user
+      - DB_PASSWORD=secret123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - inventory-network
+    command: php artisan serve --host=0.0.0.0 --port=8000
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: inventory-mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    environment:
+      - MYSQL_ROOT_PASSWORD=root123
+      - MYSQL_DATABASE=inventory_db
+      - MYSQL_USER=inventory_user
+      - MYSQL_PASSWORD=secret123
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - inventory-network
+
+  # Redis for Cache & Sessions
+  redis:
+    image: redis:7-alpine
+    container_name: inventory-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - inventory-network
+    command: redis-server --appendonly yes
+
+  # Nginx (Optional - for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: inventory-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./frontend/frontend/dist:/usr/share/nginx/html
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - inventory-network
+
+  # phpMyAdmin (للإدارة السهلة)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: inventory-phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=root123
+    depends_on:
+      - mysql
+    networks:
+      - inventory-network
+
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  inventory-network:
+    driver: bridge
