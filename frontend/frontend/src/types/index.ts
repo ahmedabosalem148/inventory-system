@@ -29,15 +29,40 @@ export interface User {
   id: number
   name: string
   email: string
-  role?: UserRole
+  phone?: string
+  role?: UserRole | string
   branch_id?: number | null
   branch?: Branch
+  branch_name?: string
   // Can be either string array or Role object array (Laravel API returns both formats)
   roles?: (Role | string)[]
   permissions?: (Permission | string)[]
   all_permissions?: (Permission | string)[]
+  is_active?: boolean
   created_at: string
   updated_at: string
+}
+
+export interface CreateUserInput {
+  name: string
+  email: string
+  phone?: string
+  password: string
+  password_confirmation: string
+  role: string
+  branch_id?: number | null
+  is_active?: boolean
+}
+
+export interface UpdateUserInput {
+  name?: string
+  email?: string
+  phone?: string
+  password?: string
+  password_confirmation?: string
+  role?: string
+  branch_id?: number | null
+  is_active?: boolean
 }
 
 export interface AuthResponse {

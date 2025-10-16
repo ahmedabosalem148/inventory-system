@@ -22,6 +22,7 @@ import {
   CustomerBalancesReport 
 } from '@/features/reports'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+import { UsersPage } from '@/features/users'
 import ReturnVouchersPage from '@/features/returns/ReturnVouchersPage'
 import ReturnVoucherDetailsPage from '@/features/returns/ReturnVoucherDetailsPage'
 import IssueVoucherDetailsPage from '@/features/sales/IssueVoucherDetailsPage'
@@ -178,6 +179,8 @@ function App() {
         return <InventoryPage />
       case 'reports':
         return <ReportsPage />
+      case 'users':
+        return <UsersPage />
       case 'settings':
         return <SettingsPage />
       case 'return-vouchers':
