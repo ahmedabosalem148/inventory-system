@@ -1,2 +1,5 @@
 export { ReportsPage } from './ReportsPage'
 export { StockSummaryReport } from './StockSummaryReport'
+export { LowStockReport } from './LowStockReport'
+export { ProductMovementsReport } from './ProductMovementsReport'
+export { CustomerBalancesReport } from './CustomerBalancesReport'

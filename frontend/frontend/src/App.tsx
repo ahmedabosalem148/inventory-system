@@ -14,7 +14,13 @@ import CustomersPage from '@/features/customers/CustomersPage'
 import CustomerDetailsPage from '@/features/customers/CustomerDetailsPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
 import { InventoryPage } from '@/features/inventory/InventoryPage'
-import { ReportsPage, StockSummaryReport } from '@/features/reports'
+import { 
+  ReportsPage, 
+  StockSummaryReport, 
+  LowStockReport, 
+  ProductMovementsReport,
+  CustomerBalancesReport 
+} from '@/features/reports'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import ReturnVouchersPage from '@/features/returns/ReturnVouchersPage'
 import ReturnVoucherDetailsPage from '@/features/returns/ReturnVoucherDetailsPage'
@@ -145,6 +151,12 @@ function App() {
       switch (reportType) {
         case 'stock-summary':
           return <StockSummaryReport />
+        case 'low-stock':
+          return <LowStockReport />
+        case 'product-movements':
+          return <ProductMovementsReport />
+        case 'customer-balances':
+          return <CustomerBalancesReport />
         default:
           return <ReportsPage />
       }
