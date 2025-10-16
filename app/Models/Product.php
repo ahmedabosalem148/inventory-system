@@ -51,7 +51,7 @@ class Product extends Model
     public function branches()
     {
         return $this->belongsToMany(Branch::class, 'product_branch_stock')
-                    ->withPivot('current_stock')
+                    ->withPivot('current_stock', 'reserved_stock', 'min_qty')
                     ->withTimestamps();
     }
 

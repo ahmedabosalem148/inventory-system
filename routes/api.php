@@ -85,6 +85,13 @@ Route::prefix('v1')
     // Core Resources (CRUD operations)
     // ========================================================================
     Route::apiResource('branches', BranchController::class)->names('api.branches');
+    
+    // Product branch minimum stock management
+    Route::get('products/{product}/branch-min-stock', [ProductController::class, 'getBranchMinStock'])
+        ->name('api.products.branch-min-stock.index');
+    Route::put('products/{product}/branch-min-stock', [ProductController::class, 'updateBranchMinStock'])
+        ->name('api.products.branch-min-stock.update');
+    
     Route::apiResource('products', ProductController::class)->names('api.products');
 
     // Customer Management (TASK-009) - Must be before apiResource

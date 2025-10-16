@@ -322,4 +322,67 @@ class ProductController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get minimum stock levels for a product across all branches
+     * 
+     * GET /api/v1/products/{id}/branch-min-stock
+     */
+    public function getBranchMinStock(Product $product): JsonResponse
+    {
+        $branchStocks = $product->branches()
+            ->withPivot('current_stock', 'min_qty')
+            ->get()
+            ->map(function ($branch) {
+                return [
+                    'branch_id' => $branch->id,
+                    'branch_name' => $branch->name,
+                    'current_stock' => $branch->pivot->current_stock,
+                    'min_qty' => $branch->pivot->min_qty,
+                    'is_low' => $branch->pivot->current_stock < $branch->pivot->min_qty,
+                ];
+            });
+
+        return response()->json([
+            'product' => [
+                'id' => $product->id,
+                'name' => $product->name,
+            ],
+            'branch_stocks' => $branchStocks,
+        ]);
+    }
+
+    /**
+     * Update minimum stock level for a product in a specific branch
+     * 
+     * PUT /api/v1/products/{id}/branch-min-stock
+     * Body: { "branch_id": 1, "min_qty": 10 }
+     */
+    public function updateBranchMinStock(Request $request, Product $product): JsonResponse
+    {
+        $validated = $request->validate([
+            'branch_id' => 'required|exists:branches,id',
+            'min_qty' => 'required|integer|min:0',
+        ]);
+
+        try {
+            // Update or create the pivot record
+            $product->branches()->syncWithoutDetaching([
+                $validated['branch_id'] => [
+                    'min_qty' => $validated['min_qty'],
+                ],
+            ]);
+
+            return response()->json([
+                'message' => 'تم تحديث الحد الأدنى بنجاح',
+                'min_qty' => $validated['min_qty'],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'فشل تحديث الحد الأدنى',
+                'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
+            ], 500);
+        }
+    }
 }
