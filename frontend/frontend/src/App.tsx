@@ -14,7 +14,7 @@ import CustomersPage from '@/features/customers/CustomersPage'
 import CustomerDetailsPage from '@/features/customers/CustomerDetailsPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
 import { InventoryPage } from '@/features/inventory/InventoryPage'
-import { ReportsPage } from '@/features/reports/ReportsPage'
+import { ReportsPage, StockSummaryReport } from '@/features/reports'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import ReturnVouchersPage from '@/features/returns/ReturnVouchersPage'
 import ReturnVoucherDetailsPage from '@/features/returns/ReturnVoucherDetailsPage'
@@ -137,6 +137,17 @@ function App() {
     // Handle invoices/:id route (issue vouchers details)
     if (currentPage.startsWith('invoices/')) {
       return <IssueVoucherDetailsPage />
+    }
+
+    // Handle reports routes
+    if (currentPage.startsWith('reports/')) {
+      const reportType = currentPage.split('/')[1]
+      switch (reportType) {
+        case 'stock-summary':
+          return <StockSummaryReport />
+        default:
+          return <ReportsPage />
+      }
     }
 
     switch (currentPage) {
