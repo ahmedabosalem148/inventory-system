@@ -106,11 +106,11 @@ export const SalesPage = () => {
   }
 
   /**
-   * Handle view details
+   * Handle view invoice details
    */
   const handleView = (invoice: SalesInvoice) => {
-    setSelectedInvoice(invoice)
-    setShowInvoiceDialog(true)
+    // Navigate to details page
+    window.location.hash = `invoices/${invoice.id}`
   }
 
   /**

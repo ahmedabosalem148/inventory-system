@@ -86,6 +86,12 @@ const navigationItems: NavItem[] = [
     roles: ['manager', 'accounting'],
   },
   {
+    label: 'الشيكات',
+    icon: DollarSign,
+    href: '#cheques',
+    roles: ['manager', 'accounting'],
+  },
+  {
     label: 'التقارير',
     icon: BarChart3,
     href: '#reports',

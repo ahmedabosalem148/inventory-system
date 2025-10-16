@@ -16,8 +16,11 @@ import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
 import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
-import { ReturnVouchersPage } from '@/features/returns/ReturnVouchersPage'
+import ReturnVouchersPage from '@/features/returns/ReturnVouchersPage'
+import ReturnVoucherDetailsPage from '@/features/returns/ReturnVoucherDetailsPage'
+import IssueVoucherDetailsPage from '@/features/sales/IssueVoucherDetailsPage'
 import PaymentsPage from '@/features/payments/PaymentsPage'
+import ChequesPage from '@/features/payments/ChequesPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
 
 function App() {
@@ -126,6 +129,16 @@ function App() {
       return <CustomerDetailsPage />
     }
 
+    // Handle return-vouchers/:id route
+    if (currentPage.startsWith('return-vouchers/') && currentPage !== 'return-vouchers/new') {
+      return <ReturnVoucherDetailsPage />
+    }
+
+    // Handle invoices/:id route (issue vouchers details)
+    if (currentPage.startsWith('invoices/')) {
+      return <IssueVoucherDetailsPage />
+    }
+
     switch (currentPage) {
       case 'products':
         return <ProductsPage />
@@ -148,6 +161,8 @@ function App() {
         return <ReturnVouchersPage />
       case 'payments':
         return <PaymentsPage />
+      case 'cheques':
+        return <ChequesPage />
       case 'branches':
         return <BranchesPage />
       case 'dashboard':
