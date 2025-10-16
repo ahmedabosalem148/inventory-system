@@ -115,3 +115,46 @@ export async function exportProducts(filters?: ProductFilters): Promise<Blob> {
   })
   return response.data
 }
+
+/**
+ * Branch minimum stock management
+ */
+
+export interface BranchStock {
+  branch_id: number
+  branch_name: string
+  current_stock: number
+  min_qty: number
+  is_low: boolean
+}
+
+export interface BranchMinStockResponse {
+  product: {
+    id: number
+    name: string
+  }
+  branch_stocks: BranchStock[]
+}
+
+/**
+ * Get minimum stock levels for a product across all branches
+ */
+export async function getProductBranchMinStock(productId: number): Promise<BranchMinStockResponse> {
+  const response = await apiClient.get<BranchMinStockResponse>(`/products/${productId}/branch-min-stock`)
+  return response.data
+}
+
+/**
+ * Update minimum stock level for a product in a specific branch
+ */
+export async function updateProductBranchMinStock(
+  productId: number,
+  branchId: number,
+  minQty: number
+): Promise<{ message: string; min_qty: number }> {
+  const response = await apiClient.put<{ message: string; min_qty: number }>(
+    `/products/${productId}/branch-min-stock`,
+    { branch_id: branchId, min_qty: minQty }
+  )
+  return response.data
+}

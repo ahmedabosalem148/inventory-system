@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Plus, Filter, Download, Upload, AlertTriangle } from 'lucide-react'
+import { Plus, Filter, Download, Upload, AlertTriangle, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DataTable } from '@/components/ui/data-table'
@@ -16,6 +16,7 @@ import { getProducts, deleteProduct, type ProductsListParams } from '@/services/
 import type { Product } from '@/types'
 import { ProductDialog } from './ProductDialog'
 import { ProductFiltersDialog } from './ProductFiltersDialog'
+import { BranchMinStockDialog } from './BranchMinStockDialog'
 
 export function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -29,6 +30,7 @@ export function ProductsPage() {
   // Dialogs state
   const [showProductDialog, setShowProductDialog] = useState(false)
   const [showFiltersDialog, setShowFiltersDialog] = useState(false)
+  const [showMinStockDialog, setShowMinStockDialog] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   
   // Filters state
@@ -109,6 +111,14 @@ export function ProductsPage() {
     if (saved) {
       loadProducts()
     }
+  }
+
+  /**
+   * Handle manage min stock click
+   */
+  const handleManageMinStock = (product: Product) => {
+    setSelectedProduct(product)
+    setShowMinStockDialog(true)
   }
 
   /**
@@ -195,6 +205,14 @@ export function ProductsPage() {
       header: 'الإجراءات',
       render: (row: Product) => (
         <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleManageMinStock(row)}
+            title="إدارة الحد الأدنى للمخزون"
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -353,6 +371,19 @@ export function ProductsPage() {
           filters={filters}
           onApply={handleFiltersApply}
           onClose={() => setShowFiltersDialog(false)}
+        />
+      )}
+
+      {showMinStockDialog && selectedProduct && (
+        <BranchMinStockDialog
+          product={selectedProduct}
+          onClose={(updated) => {
+            setShowMinStockDialog(false)
+            setSelectedProduct(null)
+            if (updated) {
+              loadProducts()
+            }
+          }}
         />
       )}
     </div>
