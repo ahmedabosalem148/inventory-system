@@ -171,7 +171,15 @@ export function DataTable<T extends Record<string, any>>({
                       >
                         {column.render
                           ? column.render(item, index)
-                          : String(item[column.key] ?? '-')}
+                          : (() => {
+                              const value = item[column.key]
+                              // Handle objects, arrays, null, undefined
+                              if (value === null || value === undefined) return '-'
+                              if (typeof value === 'object') {
+                                return JSON.stringify(value)
+                              }
+                              return String(value)
+                            })()}
                       </td>
                     ))}
                   </tr>

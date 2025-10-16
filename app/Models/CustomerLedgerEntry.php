@@ -37,7 +37,7 @@ class CustomerLedgerEntry extends Model
     /**
      * The table associated with the model.
      */
-    protected $table = 'customer_ledger_entries';
+    protected $table = 'customer_ledger';
 
     /**
      * The attributes that are mass assignable.

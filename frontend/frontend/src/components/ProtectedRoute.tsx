@@ -29,7 +29,7 @@ export function ProtectedRoute({
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    window.location.href = '/login'
+    // Don't use window.location.href - just return null and let App.tsx handle showing LoginPage
     return null
   }
 
@@ -57,7 +57,10 @@ export function ProtectedRoute({
   }
 
   // Check permission if required
-  if (requiredPermission && !user?.permissions?.some(p => p.name === requiredPermission)) {
+  if (requiredPermission && !user?.permissions?.some(p => {
+    const permName = typeof p === 'string' ? p : p.name
+    return permName === requiredPermission
+  })) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="max-w-md text-center">

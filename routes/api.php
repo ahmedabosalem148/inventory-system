@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\V1\InventoryMovementController;
 use App\Http\Controllers\Api\V1\IssueVoucherController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\PurchaseOrderController;
+use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ReturnVoucherController;
 use App\Http\Controllers\Api\V1\UserBranchController;
@@ -98,6 +100,15 @@ Route::prefix('v1')
         ->name('api.customers.activity');
     
     Route::apiResource('customers', CustomerController::class)->names('api.customers');
+
+    // ========================================================================
+    // Suppliers & Purchase Orders
+    // ========================================================================
+    Route::apiResource('suppliers', SupplierController::class)->names('api.suppliers');
+    Route::get('suppliers-statistics', [SupplierController::class, 'statistics'])
+        ->name('api.suppliers.statistics');
+    
+    Route::apiResource('purchase-orders', PurchaseOrderController::class)->names('api.purchase-orders');
 
     // ========================================================================
     // Vouchers & Transactions

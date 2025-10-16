@@ -155,7 +155,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
                 {user?.roles && user.roles.length > 0 && (
                   <div className="mt-2">
                     <Badge variant="secondary" className="text-xs">
-                      {user.roles[0]?.name || 'مستخدم'}
+                      {typeof user.roles[0] === 'string' ? user.roles[0] : user.roles[0]?.name || 'مستخدم'}
                     </Badge>
                   </div>
                 )}

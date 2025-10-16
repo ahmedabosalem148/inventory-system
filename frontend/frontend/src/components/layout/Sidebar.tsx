@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/lib/utils'
 import {
@@ -11,6 +12,7 @@ import {
   Settings,
   Building2,
   ShoppingCart,
+  ShoppingBag,
   ClipboardList,
   X,
 } from 'lucide-react'
@@ -33,43 +35,61 @@ const navigationItems: NavItem[] = [
     label: 'لوحة التحكم',
     icon: LayoutDashboard,
     href: '#dashboard',
+    // Available to all roles
   },
   {
     label: 'المنتجات',
     icon: Package,
     href: '#products',
-    permissions: ['view-products'],
+    roles: ['manager', 'store_user'],
+  },
+  {
+    label: 'المبيعات',
+    icon: ShoppingCart,
+    href: '#sales',
+    roles: ['manager', 'accounting', 'store_user'],
+  },
+  {
+    label: 'المشتريات',
+    icon: ShoppingBag,
+    href: '#purchases',
+    roles: ['manager', 'store_user'],
   },
   {
     label: 'العملاء',
     icon: Users,
     href: '#customers',
-    permissions: ['view-customers'],
+    roles: ['manager', 'accounting'],
+  },
+  {
+    label: 'الموردين',
+    icon: Users,
+    href: '#suppliers',
+    roles: ['manager', 'accounting'],
   },
   {
     label: 'فواتير الصرف',
     icon: FileText,
     href: '#issue-vouchers',
-    permissions: ['view-vouchers'],
+    roles: ['manager', 'store_user'],
   },
   {
     label: 'مرتجعات',
     icon: Repeat,
     href: '#return-vouchers',
-    permissions: ['view-returns'],
+    roles: ['manager', 'store_user'],
   },
   {
     label: 'المدفوعات',
     icon: DollarSign,
     href: '#payments',
-    permissions: ['view-payments'],
-    roles: ['manager', 'accountant'],
+    roles: ['manager', 'accounting'],
   },
   {
     label: 'التقارير',
     icon: BarChart3,
     href: '#reports',
-    permissions: ['view-reports'],
+    roles: ['manager', 'accounting'],
   },
   {
     label: 'المخازن',
@@ -78,16 +98,10 @@ const navigationItems: NavItem[] = [
     roles: ['manager'],
   },
   {
-    label: 'المشتريات',
-    icon: ShoppingCart,
-    href: '#purchases',
-    permissions: ['manage-inventory'],
-  },
-  {
     label: 'الجرد',
     icon: ClipboardList,
     href: '#inventory',
-    permissions: ['manage-inventory'],
+    roles: ['manager', 'store_user'],
   },
   {
     label: 'الإعدادات',
@@ -99,26 +113,56 @@ const navigationItems: NavItem[] = [
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user } = useAuth()
+  const [currentHash, setCurrentHash] = useState(window.location.hash)
 
-  // Filter navigation items based on user roles/permissions
-  const filteredNav = navigationItems.filter((item) => {
-    // If no restrictions, show to everyone
-    if (!item.roles && !item.permissions) return true
-
-    // Check roles
-    if (item.roles) {
-      const userRoles = user?.roles?.map((r) => r?.name?.toLowerCase()).filter(Boolean) || []
-      const hasRole = item.roles.some((role) => userRoles.includes(role))
-      if (!hasRole) return false
+  // Listen to hash changes
+  useEffect(() => {
+    const handleHashChange = () => {
+      setCurrentHash(window.location.hash)
     }
 
-    // Check permissions (if user has permissions array)
-    if (item.permissions && user?.permissions) {
-      const userPermissions = user.permissions.map((p) => p?.name).filter(Boolean) || []
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  // Filter navigation items based on user roles
+  const filteredNav = navigationItems.filter((item) => {
+    // If no restrictions, show to everyone (like dashboard)
+    if (!item.roles && !item.permissions) return true
+
+    // Check roles (if specified)
+    if (item.roles) {
+      // Handle both string array and object array formats
+      const userRoles = user?.roles?.map((r) => 
+        typeof r === 'string' ? r.toLowerCase() : r?.name?.toLowerCase()
+      ).filter(Boolean) || []
+      
+      console.log('🔍 Checking item:', item.label, '| Required roles:', item.roles, '| User roles:', userRoles)
+      
+      const hasRole = item.roles.some((role) => userRoles.includes(role.toLowerCase()))
+      
+      console.log('✅ Has role?', hasRole)
+      
+      return hasRole
+    }
+
+    // Check permissions (if specified) - fallback
+    if (item.permissions) {
+      // If user doesn't have any permissions, deny access
+      if (!user?.permissions && !user?.all_permissions) {
+        return false
+      }
+      
+      // Handle both string array and object array formats
+      const userPermissions = [
+        ...(user.permissions?.map((p) => typeof p === 'string' ? p : p?.name).filter(Boolean) || []),
+        ...(user.all_permissions?.map((p) => typeof p === 'string' ? p : p?.name).filter(Boolean) || [])
+      ]
+      
       const hasPermission = item.permissions.some((perm) =>
         userPermissions.includes(perm)
       )
-      if (!hasPermission) return false
+      return hasPermission
     }
 
     return true
@@ -159,19 +203,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
           {filteredNav.map((item) => {
             const Icon = item.icon
+            const isActive = currentHash === item.href
             return (
               <a
                 key={item.href}
                 href={item.href}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                  'hover:bg-blue-50 hover:text-blue-700',
-                  'text-gray-700'
+                  isActive
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'hover:bg-blue-50 hover:text-blue-700 text-gray-700'
                 )}
-                onClick={(e) => {
-                  e.preventDefault()
+                onClick={() => {
                   onClose()
-                  // TODO: Handle navigation with router
                 }}
               >
                 <Icon className="w-5 h-5" />

@@ -75,7 +75,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       localStorage.removeItem('access_token')
       setUser(null)
-      window.location.href = '/login'
+      // Don't use window.location.href - just clear state and let React handle the render
+      // The App component will show LoginPage when isAuthenticated is false
     }
   }
 

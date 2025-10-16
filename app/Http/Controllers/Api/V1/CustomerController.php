@@ -265,21 +265,59 @@ class CustomerController extends Controller
         ]);
 
         try {
+            $search = $request->get('search');
             $onlyWithBalance = $request->boolean('only_with_balance', false);
             $sortBy = $request->get('sort_by', 'name');
 
-            $customers = $this->ledgerService->getCustomersBalances($onlyWithBalance, $sortBy);
+            // Get all customers with balances
+            $allCustomers = $this->ledgerService->getCustomersBalances($onlyWithBalance, $sortBy);
+            
+            // Apply search filter if provided
+            if ($search) {
+                $allCustomers = $allCustomers->filter(function ($customer) use ($search) {
+                    return stripos($customer['name'], $search) !== false ||
+                           stripos($customer['code'], $search) !== false ||
+                           stripos($customer['phone'] ?? '', $search) !== false;
+                });
+            }
+
+            // Calculate statistics
+            $statistics = [
+                'total_customers' => $allCustomers->count(),
+                'debtors_count' => $allCustomers->where('status', 'debtor')->count(),
+                'creditors_count' => $allCustomers->where('status', 'creditor')->count(),
+                'zero_balance_count' => $allCustomers->where('status', 'zero')->count(),
+            ];
+
+            // Transform customers to include additional stats
+            $customers = $allCustomers->map(function ($customer) {
+                return [
+                    'id' => $customer['id'],
+                    'code' => $customer['code'],
+                    'name' => $customer['name'],
+                    'phone' => $customer['phone'] ?? null,
+                    'address' => null, // Add if needed
+                    'balance' => $customer['balance'],
+                    'status' => $customer['status'],
+                    'last_activity_at' => $customer['last_activity_at'],
+                    'purchases_count' => 0, // TODO: Calculate from vouchers
+                    'purchases_total' => $customer['total_debit'],
+                    'returns_count' => 0, // TODO: Calculate from return vouchers
+                    'returns_total' => 0, // TODO: Calculate
+                    'payments_total' => $customer['total_credit'],
+                ];
+            });
 
             return response()->json([
-                'data' => $customers,
-                'meta' => [
-                    'total_count' => $customers->count(),
-                    'total_debtors' => $this->ledgerService->getTotalDebtors(),
-                    'total_creditors' => $this->ledgerService->getTotalCreditors(),
-                ],
+                'customers' => $customers->values(),
+                'statistics' => $statistics,
             ], 200);
 
         } catch (\Exception $e) {
+            \Log::error('CustomerController@getCustomersWithBalances error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'message' => 'حدث خطأ أثناء جلب أرصدة العملاء',
                 'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
@@ -308,26 +346,60 @@ class CustomerController extends Controller
         try {
             $includeBalance = $request->boolean('include_balance', true);
 
-            $statement = $this->ledgerService->getCustomerStatement(
+            $statementData = $this->ledgerService->getCustomerStatement(
                 $customer->id,
                 $validated['from_date'],
                 $validated['to_date'],
                 $includeBalance
             );
 
+            // Transform entries to match frontend expectations
+            $entries = collect($statementData['entries'])->map(function ($entry) {
+                return [
+                    'id' => $entry->id,
+                    'date' => $entry->transaction_date,
+                    'description' => $entry->notes ?? $entry->transaction_type,
+                    'debit_aliah' => $entry->debit,
+                    'credit_lah' => $entry->credit,
+                    'running_balance' => $entry->running_balance ?? 0,
+                    'reference_type' => $entry->transaction_type ?? '',
+                    'reference_id' => $entry->reference_id ?? null,
+                ];
+            });
+
+            // Get customer stats
+            $customerBalance = $this->ledgerService->getCustomersBalances(false, 'name')
+                ->firstWhere('id', $customer->id);
+
             return response()->json([
-                'data' => [
-                    'customer' => [
-                        'id' => $customer->id,
-                        'code' => $customer->code,
-                        'name' => $customer->name,
-                        'phone' => $customer->phone,
-                    ],
-                    'statement' => $statement,
+                'customer' => [
+                    'id' => $customer->id,
+                    'code' => $customer->code,
+                    'name' => $customer->name,
+                    'phone' => $customer->phone,
+                    'address' => $customer->address,
+                    'balance' => $customerBalance['balance'] ?? 0,
+                    'status' => $customerBalance['status'] ?? 'zero',
+                    'purchases_count' => 0, // TODO
+                    'purchases_total' => $customerBalance['total_debit'] ?? 0,
+                    'returns_count' => 0, // TODO
+                    'returns_total' => 0, // TODO
+                    'payments_total' => $customerBalance['total_credit'] ?? 0,
                 ],
+                'opening_balance' => $statementData['opening_balance'],
+                'entries' => $entries,
+                'total_debit' => $statementData['total_debit'],
+                'total_credit' => $statementData['total_credit'],
+                'closing_balance' => $statementData['closing_balance'],
             ], 200);
 
         } catch (\Exception $e) {
+            \Log::error('CustomerController@getStatement error: ' . $e->getMessage(), [
+                'customer_id' => $customer->id,
+                'params' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'message' => 'حدث خطأ أثناء جلب كشف الحساب',
                 'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
