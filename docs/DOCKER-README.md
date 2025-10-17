@@ -5,49 +5,95 @@
 - Docker Compose v2.0+
 - 4GB RAM على الأقل
 
-## 🚀 التشغيل للمرة الأولى
+---
+
+## 🚀 التشغيل السريع (كل حاجة مرة واحدة!)
+
+### ⚡ الطريقة الأسهل - PowerShell Script
+
+```powershell
+# تشغيل كل حاجة
+.\docker-start.ps1
+```
+
+هيعمل كل ده تلقائي:
+- ✅ يبني الـ containers
+- ✅ يشغل كل الخدمات
+- ✅ ينتظر MySQL
+- ✅ يعمل migrations
+- ✅ يعمل cache
+- ✅ يجهز كل حاجة
+
+### 🛑 الإيقاف
+
+```powershell
+.\docker-stop.ps1
+```
+
+### 🔄 إعادة التشغيل
+
+```powershell
+.\docker-restart.ps1
+
+# أو لخدمة محددة
+.\docker-restart.ps1 -Service backend
+```
+
+### 📝 عرض اللوجز
+
+```powershell
+# كل اللوجز
+.\docker-logs.ps1
+
+# لوجز خدمة محددة
+.\docker-logs.ps1 -Service backend
+
+# متابعة اللوجز مباشرة
+.\docker-logs.ps1 -Follow
+```
+
+---
+
+## 🛠️ التشغيل للمرة الأولى (Manual)
+
+إذا كنت عايز تعمل كل حاجة يدوي:
 
 ### Windows (PowerShell):
 ```powershell
 # 1. نسخ ملف البيئة
-Copy-Item .env.docker .env
+Copy-Item .env.example .env
 
-# 2. بناء الـ containers
-docker-compose build
+# 2. تشغيل كل حاجة
+docker-compose up -d --build
 
-# 3. تشغيل المشروع
-docker-compose up -d
+# 3. الانتظار (تلقائي في السكريبت)
+Start-Sleep -Seconds 15
 
-# 4. الانتظار حتى MySQL يصبح جاهزاً (10 ثواني)
-Start-Sleep -Seconds 10
-
-# 5. تثبيت Dependencies
-docker-compose exec backend composer install
-docker-compose exec frontend npm install
-
-# 6. إنشاء مفتاح Laravel
-docker-compose exec backend php artisan key:generate
-
-# 7. تشغيل Migrations + Seeders
-docker-compose exec backend php artisan migrate:fresh --seed
-
-# 8. ربط Storage
-docker-compose exec backend php artisan storage:link
+# خلاص! كل حاجة شغالة
 ```
 
-### Linux/Mac (Bash):
+### Linux/Mac (Makefile):
 ```bash
-# استخدم Makefile
-make init
+# تشغيل كل حاجة
+make start
+
+# إيقاف
+make stop
+
+# عرض المساعدة
+make help
 ```
+
+---
 
 ## 🌐 الروابط
 
 | الخدمة | الرابط | الوصف |
 |--------|--------|-------|
-| Frontend | http://localhost:5173 | React + Vite |
-| Backend API | http://localhost:8000 | Laravel |
+| Frontend | http://localhost:5173 | Vue.js/React Frontend |
+| Backend API | http://localhost:8000 | Laravel API |
 | phpMyAdmin | http://localhost:8080 | إدارة قاعدة البيانات |
+| Nginx | http://localhost:80 | Web Server |
 | Nginx | http://localhost:80 | Reverse Proxy |
 
 ## 🛠️ الأوامر المفيدة

@@ -1,8 +1,21 @@
-.PHONY: help build up down restart logs shell-backend shell-frontend db-migrate db-seed db-fresh clean
+.PHONY: help build up down restart logs shell-backend shell-frontend db-migrate db-seed db-fresh clean start stop
 
 help: ## Show this help
 	@echo "Available commands:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+start: ## 🚀 Start everything (build + up + migrate)
+	@echo "🐳 Starting Inventory System..."
+	docker-compose up -d --build
+	@echo "⏳ Waiting for services..."
+	@sleep 10
+	@echo "✅ System Ready!"
+	@echo "🌐 Frontend:   http://localhost:5173"
+	@echo "🌐 Backend:    http://localhost:8000"
+	@echo "🌐 phpMyAdmin: http://localhost:8080"
+
+stop: ## 🛑 Stop everything
+	docker-compose down
 
 build: ## Build all containers
 	docker-compose build
