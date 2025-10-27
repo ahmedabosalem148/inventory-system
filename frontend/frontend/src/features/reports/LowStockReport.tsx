@@ -5,37 +5,40 @@
 
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Download, AlertTriangle, Package } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable } from '@/components/ui/data-table'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'react-hot-toast'
-import apiClient from '@/services/api/client'
+import apiClient from '@/app/axios'
 
 interface LowStockItem {
   product_id: number
-  product_name: string
+  name: string
   sku: string
   unit: string
+  category: string
+  branch_id: number
   branch_name: string
-  current_stock: number
+  quantity: number
   min_stock: number
-  shortage: number
-  status: 'critical' | 'warning'
+  deficit: number
+  percentage: number
+  status: 'out_of_stock' | 'critical' | 'low'
+  reorder_suggestion: number
 }
 
-interface LowStockData {
-  items: LowStockItem[]
-  total_products: number
-  critical_count: number
-  warning_count: number
+interface LowStockSummary {
+  total_items: number
+  out_of_stock: number
+  critical: number
+  low: number
 }
 
 export function LowStockReport() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<LowStockData | null>(null)
+  const [data, setData] = useState<LowStockItem[]>([])
+  const [summary, setSummary] = useState<LowStockSummary | null>(null)
   const [branchFilter, setBranchFilter] = useState<string>('all')
 
   useEffect(() => {
@@ -45,9 +48,10 @@ export function LowStockReport() {
   const loadReport = async () => {
     try {
       setLoading(true)
-      const params = branchFilter !== 'all' ? { branch: branchFilter } : {}
-      const response = await apiClient.get<{ data: LowStockData }>('/reports/inventory/low-stock', { params })
-      setData(response.data.data)
+      const params = branchFilter !== 'all' ? { branch_id: branchFilter } : {}
+      const response = await apiClient.get('/reports/low-stock', { params })
+      setData(response.data.data || [])
+      setSummary(response.data.summary || null)
     } catch (error: any) {
       console.error('Error loading low stock report:', error)
       toast.error(error.response?.data?.message || 'فشل تحميل التقرير')
@@ -69,17 +73,17 @@ export function LowStockReport() {
       render: (row: LowStockItem) => row.sku,
     },
     {
-      key: 'product_name',
+      key: 'name',
       header: 'اسم المنتج',
       sortable: true,
       render: (row: LowStockItem) => (
         <div className="font-medium">
-          {row.product_name}
+          {row.name}
           <Badge 
-            variant={row.status === 'critical' ? 'danger' : 'warning'} 
+            variant={row.status === 'out_of_stock' || row.status === 'critical' ? 'danger' : 'warning'} 
             className="mr-2 text-xs"
           >
-            {row.status === 'critical' ? 'حرج' : 'تحذير'}
+            {row.status === 'out_of_stock' ? 'نفذ' : row.status === 'critical' ? 'حرج' : 'منخفض'}
           </Badge>
         </div>
       ),
@@ -91,12 +95,12 @@ export function LowStockReport() {
       render: (row: LowStockItem) => row.branch_name,
     },
     {
-      key: 'current_stock',
+      key: 'quantity',
       header: 'المخزون الحالي',
       sortable: true,
       render: (row: LowStockItem) => (
-        <span className={`font-bold ${row.status === 'critical' ? 'text-red-600' : 'text-orange-600'}`}>
-          {row.current_stock} {row.unit}
+        <span className={`font-bold ${row.status === 'out_of_stock' || row.status === 'critical' ? 'text-red-600' : 'text-orange-600'}`}>
+          {row.quantity} {row.unit}
         </span>
       ),
     },
@@ -111,14 +115,14 @@ export function LowStockReport() {
       ),
     },
     {
-      key: 'shortage',
+      key: 'deficit',
       header: 'النقص',
       sortable: true,
       render: (row: LowStockItem) => (
         <div className="flex items-center gap-2">
-          <AlertTriangle className={`w-4 h-4 ${row.status === 'critical' ? 'text-red-600' : 'text-orange-600'}`} />
+          <AlertTriangle className={`w-4 h-4 ${row.status === 'out_of_stock' || row.status === 'critical' ? 'text-red-600' : 'text-orange-600'}`} />
           <span className="font-bold">
-            {row.shortage} {row.unit}
+            {row.deficit} {row.unit}
           </span>
         </div>
       ),
@@ -133,7 +137,7 @@ export function LowStockReport() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate('/reports')}
+            onClick={() => window.location.hash = '#reports'}
           >
             <ArrowLeft className="w-4 h-4 ml-2" />
             رجوع
@@ -152,20 +156,32 @@ export function LowStockReport() {
       </div>
 
       {/* Summary Cards */}
-      {data && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {summary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
-                إجمالي المنتجات المنخفضة
+                إجمالي الأصناف
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-orange-600" />
-                <span className="text-2xl font-bold">{data.total_products}</span>
-                <span className="text-sm text-gray-500">منتج</span>
+                <span className="text-2xl font-bold">{summary.total_items}</span>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                نفذ من المخزون
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge variant="danger" className="text-lg px-3 py-1">
+                {summary.out_of_stock}
+              </Badge>
             </CardContent>
           </Card>
 
@@ -176,28 +192,22 @@ export function LowStockReport() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2">
-                <Badge variant="danger" className="text-lg px-3 py-1">
-                  {data.critical_count}
-                </Badge>
-                <span className="text-sm text-gray-500">منتج (مخزون = 0)</span>
-              </div>
+              <Badge variant="danger" className="text-lg px-3 py-1">
+                {summary.critical}
+              </Badge>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
-                حالة تحذير
+                منخفض
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2">
-                <Badge variant="warning" className="text-lg px-3 py-1">
-                  {data.warning_count}
-                </Badge>
-                <span className="text-sm text-gray-500">منتج (مخزون منخفض)</span>
-              </div>
+              <Badge variant="warning" className="text-lg px-3 py-1">
+                {summary.low}
+              </Badge>
             </CardContent>
           </Card>
         </div>
@@ -228,7 +238,7 @@ export function LowStockReport() {
         <CardContent className="p-6">
           <DataTable
             columns={columns}
-            data={data?.items || []}
+            data={data || []}
             loading={loading}
             emptyMessage="لا توجد منتجات منخفضة المخزون"
           />
@@ -236,7 +246,7 @@ export function LowStockReport() {
       </Card>
 
       {/* Alert Message */}
-      {data && data.total_products > 0 && (
+      {summary && summary.total_items > 0 && (
         <Card className="bg-orange-50 border-orange-200">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
@@ -244,9 +254,12 @@ export function LowStockReport() {
               <div>
                 <h3 className="font-semibold text-orange-900">تنبيه مهم</h3>
                 <p className="text-sm text-orange-800 mt-1">
-                  يوجد <span className="font-bold">{data.total_products}</span> منتج يحتاج إلى إعادة طلب.
-                  {data.critical_count > 0 && (
-                    <> منهم <span className="font-bold text-red-600">{data.critical_count}</span> في حالة حرجة (مخزون منتهي).</>
+                  يوجد <span className="font-bold">{summary.total_items}</span> منتج يحتاج إلى إعادة طلب.
+                  {summary.out_of_stock > 0 && (
+                    <> منهم <span className="font-bold text-red-600">{summary.out_of_stock}</span> نفذ من المخزون.</>
+                  )}
+                  {summary.critical > 0 && (
+                    <> و <span className="font-bold text-red-600">{summary.critical}</span> في حالة حرجة.</>
                   )}
                 </p>
               </div>

@@ -40,6 +40,9 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
   // Form data
   const [customerId, setCustomerId] = useState<number>(0)
   const [branchId, setBranchId] = useState<number>(1)
+  const [issueType, setIssueType] = useState<'SALE' | 'TRANSFER'>('SALE')
+  const [targetBranchId, setTargetBranchId] = useState<number>(0)
+  const [paymentType, setPaymentType] = useState<'CASH' | 'CREDIT'>('CASH')
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().split('T')[0]
   )
@@ -231,6 +234,23 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
       toast.error('يجب ملء بيانات جميع الأصناف')
       return
     }
+    
+    // Validate issue type specific fields
+    if (issueType === 'TRANSFER') {
+      if (!targetBranchId) {
+        toast.error('يجب تحديد الفرع المستهدف للتحويل')
+        return
+      }
+      if (targetBranchId === branchId) {
+        toast.error('الفرع المستهدف يجب أن يكون مختلفاً عن الفرع الحالي')
+        return
+      }
+    }
+    
+    if (issueType === 'SALE' && !paymentType) {
+      toast.error('يجب تحديد طريقة الدفع')
+      return
+    }
 
     try {
       setLoading(true)
@@ -247,6 +267,9 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
       const data: CreateSalesInvoiceInput = {
         customer_id: customerId,
         branch_id: branchId,
+        issue_type: issueType,
+        target_branch_id: issueType === 'TRANSFER' ? targetBranchId : undefined,
+        payment_type: issueType === 'SALE' ? paymentType : undefined,
         issue_date: invoiceDate, // Backend uses issue_date
         due_date: dueDate || undefined,
         discount_type: hasInvoiceDiscount ? invoiceDiscountType.toUpperCase() as 'PERCENTAGE' | 'FIXED' : undefined,
@@ -346,6 +369,48 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
                 </span>
               </div>
             </div>
+
+            <div>
+              <Label>نوع الإذن *</Label>
+              <select
+                value={issueType}
+                onChange={(e) => setIssueType(e.target.value as 'SALE' | 'TRANSFER')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="SALE">بيع</option>
+                <option value="TRANSFER">تحويل بين فروع</option>
+              </select>
+            </div>
+
+            {issueType === 'TRANSFER' && (
+              <div>
+                <Label>الفرع المستهدف *</Label>
+                <Input
+                  type="number"
+                  value={targetBranchId || ''}
+                  onChange={(e) => setTargetBranchId(Number(e.target.value))}
+                  placeholder="رقم الفرع المستهدف"
+                  min="1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  يجب أن يكون مختلفاً عن الفرع الحالي
+                </p>
+              </div>
+            )}
+
+            {issueType === 'SALE' && (
+              <div>
+                <Label>طريقة الدفع *</Label>
+                <select
+                  value={paymentType}
+                  onChange={(e) => setPaymentType(e.target.value as 'CASH' | 'CREDIT')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="CASH">نقدي</option>
+                  <option value="CREDIT">آجل</option>
+                </select>
+              </div>
+            )}
 
             <div>
               <Label>تاريخ الفاتورة *</Label>

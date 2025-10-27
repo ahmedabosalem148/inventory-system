@@ -124,13 +124,24 @@ class CustomerController extends Controller
     }
 
     /**
-     * عرض تفاصيل عميل واحد
+     * عرض تفاصيل عميل
      * 
      * GET /api/v1/customers/{id}
      */
-    public function show(Customer $customer): JsonResponse
+    public function show(Request $request, Customer $customer): JsonResponse
     {
-        $customer->load('ledgerEntries');
+        // Load ledger entries with optional date filtering
+        $query = $customer->ledgerEntries();
+        
+        if ($request->has('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+        
+        if ($request->has('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+        
+        $customer->setRelation('ledgerEntries', $query->orderBy('created_at', 'desc')->get());
 
         return response()->json([
             'data' => CustomerResource::make($customer),
@@ -491,6 +502,103 @@ class CustomerController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'حدث خطأ أثناء جلب نشاط العميل',
+                'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
+            ], 500);
+        }
+    }
+
+    /**
+     * تصدير كشف حساب العميل PDF
+     * 
+     * GET /api/v1/customers/{id}/statement/pdf
+     */
+    public function exportStatementPDF(Request $request, Customer $customer)
+    {
+        try {
+            $query = $customer->ledgerEntries();
+            
+            if ($request->has('from_date')) {
+                $query->whereDate('created_at', '>=', $request->from_date);
+            }
+            
+            if ($request->has('to_date')) {
+                $query->whereDate('created_at', '<=', $request->to_date);
+            }
+            
+            $ledgerEntries = $query->orderBy('created_at', 'desc')->get();
+            
+            // TODO: Implement actual PDF generation
+            // For now, return a simple text file
+            $content = "كشف حساب العميل: {$customer->name}\n";
+            $content .= "الرصيد الحالي: " . number_format($customer->balance, 2) . " ج.م\n\n";
+            $content .= "الحركات المالية:\n";
+            $content .= str_repeat("-", 80) . "\n";
+            
+            foreach ($ledgerEntries as $entry) {
+                $content .= sprintf(
+                    "%s | %s | مدين: %s | دائن: %s | الرصيد: %s\n",
+                    $entry->created_at->format('Y-m-d'),
+                    $entry->description,
+                    number_format($entry->debit_amount, 2),
+                    number_format($entry->credit_amount, 2),
+                    number_format($entry->running_balance, 2)
+                );
+            }
+            
+            return response($content)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', "attachment; filename=\"customer-{$customer->id}-statement.pdf\"");
+                
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'حدث خطأ أثناء تصدير PDF',
+                'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
+            ], 500);
+        }
+    }
+
+    /**
+     * تصدير كشف حساب العميل Excel
+     * 
+     * GET /api/v1/customers/{id}/statement/excel
+     */
+    public function exportStatementExcel(Request $request, Customer $customer)
+    {
+        try {
+            $query = $customer->ledgerEntries();
+            
+            if ($request->has('from_date')) {
+                $query->whereDate('created_at', '>=', $request->from_date);
+            }
+            
+            if ($request->has('to_date')) {
+                $query->whereDate('created_at', '<=', $request->to_date);
+            }
+            
+            $ledgerEntries = $query->orderBy('created_at', 'desc')->get();
+            
+            // TODO: Implement actual Excel generation using PhpSpreadsheet or Laravel Excel
+            // For now, return CSV format
+            $csv = "التاريخ,الوصف,مدين,دائن,الرصيد\n";
+            
+            foreach ($ledgerEntries as $entry) {
+                $csv .= sprintf(
+                    '"%s","%s","%s","%s","%s"' . "\n",
+                    $entry->created_at->format('Y-m-d H:i:s'),
+                    $entry->description,
+                    number_format($entry->debit_amount, 2),
+                    number_format($entry->credit_amount, 2),
+                    number_format($entry->running_balance, 2)
+                );
+            }
+            
+            return response($csv)
+                ->header('Content-Type', 'application/vnd.ms-excel')
+                ->header('Content-Disposition', "attachment; filename=\"customer-{$customer->id}-statement.xlsx\"");
+                
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'حدث خطأ أثناء تصدير Excel',
                 'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
             ], 500);
         }

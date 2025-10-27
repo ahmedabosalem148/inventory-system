@@ -25,6 +25,11 @@ class CustomerResource extends JsonResource
             // Balance status
             'balance_status' => $this->balance > 0 ? 'له' : ($this->balance < 0 ? 'عليه' : 'متساوي'),
             
+            // Ledger entries (when loaded)
+            'ledger_entries' => $this->whenLoaded('ledgerEntries', function () {
+                return CustomerLedgerEntryResource::collection($this->ledgerEntries);
+            }),
+            
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

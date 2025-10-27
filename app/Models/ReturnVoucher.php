@@ -24,10 +24,13 @@ class ReturnVoucher extends Model
         'total_amount',
         'status',
         'reason',
+        'reason_category',
         'notes',
         'approved_at',
         'approved_by',
         'created_by',
+        'print_count',
+        'last_printed_at',
     ];
 
     protected $casts = [
@@ -84,11 +87,27 @@ class ReturnVoucher extends Model
     }
 
     /**
+     * Alias for creator relationship
+     */
+    public function createdBy()
+    {
+        return $this->creator();
+    }
+
+    /**
      * العلاقة مع المستخدم الذي اعتمد الإذن
      */
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Alias for approver relationship
+     */
+    public function approvedBy()
+    {
+        return $this->approver();
     }
 
     /**

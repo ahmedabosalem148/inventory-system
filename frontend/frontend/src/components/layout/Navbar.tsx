@@ -57,8 +57,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           <div className="hidden md:block w-full max-w-md">
             <SearchInput
               placeholder="ابحث عن منتج، عميل، فاتورة..."
-              onSearch={(query) => {
-                console.log('Searching for:', query)
+              onSearch={() => {
                 // TODO: Implement search
               }}
             />
@@ -185,8 +184,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
       <div className="md:hidden px-4 pb-3">
         <SearchInput
           placeholder="ابحث..."
-          onSearch={(query) => {
-            console.log('Searching for:', query)
+          onSearch={() => {
             // TODO: Implement search
           }}
         />

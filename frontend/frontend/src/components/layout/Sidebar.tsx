@@ -143,11 +143,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         typeof r === 'string' ? r.toLowerCase() : r?.name?.toLowerCase()
       ).filter(Boolean) || []
       
-      console.log('🔍 Checking item:', item.label, '| Required roles:', item.roles, '| User roles:', userRoles)
-      
       const hasRole = item.roles.some((role) => userRoles.includes(role.toLowerCase()))
-      
-      console.log('✅ Has role?', hasRole)
       
       return hasRole
     }

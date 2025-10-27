@@ -17,7 +17,11 @@ class ProductResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'brand' => $this->brand,
             'description' => $this->description,
+            'sku' => $this->sku,
+            'product_classification' => $this->product_classification,
+            'classification_label' => $this->classification_label,
             'unit' => $this->unit,
             'pack_size' => $this->pack_size,
             'purchase_price' => (float) $this->purchase_price,
@@ -27,6 +31,7 @@ class ProductResource extends JsonResource
             'is_active' => $this->is_active,
             
             // Category information
+            'category_id' => $this->category_id,
             'category' => [
                 'id' => $this->category_id,
                 'name' => $this->whenLoaded('category', fn() => $this->category->name),

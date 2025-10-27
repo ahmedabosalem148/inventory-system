@@ -26,8 +26,9 @@ class PurchaseOrderController extends Controller
         
         $query = PurchaseOrder::with(['supplier', 'branch', 'items.product']);
 
-        // Filter by branch if not super-admin
-        if (!$user->hasRole('super-admin')) {
+        // Super admin و manager و accounting يرون كل شيء
+        if (!$user->hasRole(['super-admin', 'manager', 'accounting', 'accountant'])) {
+            // باقي المستخدمين يرون فرعهم فقط
             $activeBranch = $user->getActiveBranch();
             if (!$activeBranch) {
                 return response()->json([

@@ -29,8 +29,9 @@ class ReturnVoucherController extends Controller
         
         $query = ReturnVoucher::with(['customer', 'branch', 'items.product']);
 
-        // Admin can see all or filter by branch, regular users see only their branch
-        if (!$user->hasRole('super-admin')) {
+        // Super admin و manager و accounting يرون كل شيء
+        if (!$user->hasRole(['super-admin', 'manager', 'accounting', 'accountant'])) {
+            // باقي المستخدمين يرون فرعهم فقط
             $activeBranch = $user->getActiveBranch();
             if (!$activeBranch) {
                 return response()->json([
@@ -39,7 +40,7 @@ class ReturnVoucherController extends Controller
             }
             $query->where('branch_id', $activeBranch->id);
         } elseif ($request->filled('branch_id')) {
-            // Admin can optionally filter by branch
+            // Admin و manager و accounting يمكنهم الفلترة حسب الفرع
             $query->where('branch_id', $request->branch_id);
         }
 
@@ -91,6 +92,8 @@ class ReturnVoucherController extends Controller
             'branch_id' => 'required|exists:branches,id',
             'return_date' => 'required|date',
             'notes' => 'nullable|string',
+            'reason' => 'required|string|max:500',
+            'reason_category' => 'nullable|in:damaged,defective,customer_request,wrong_item,other',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
@@ -98,7 +101,7 @@ class ReturnVoucherController extends Controller
         ]);
 
         // Check permissions: regular users need full_access on the branch
-        if (!$user->hasRole('super-admin')) {
+        if (!$user->hasRole(['super-admin', 'manager'])) {
             $branchId = $validated['branch_id'];
             
             if (!$user->hasFullAccessToBranch($branchId)) {
@@ -176,7 +179,7 @@ class ReturnVoucherController extends Controller
         }
     }
 
-    /**
+        /**
      * عرض تفاصيل إذن مرتجع واحد
      */
     public function show(Request $request, ReturnVoucher $returnVoucher)
@@ -184,7 +187,7 @@ class ReturnVoucherController extends Controller
         $user = $request->user();
 
         // Check access: admin sees all, regular users need access to branch
-        if (!$user->hasRole('super-admin')) {
+        if (!$user->hasRole(['super-admin', 'manager'])) {
             if (!$user->canAccessBranch($returnVoucher->branch_id)) {
                 return response()->json([
                     'message' => 'ليس لديك صلاحية لعرض هذا الإذن'
@@ -192,8 +195,14 @@ class ReturnVoucherController extends Controller
             }
         }
 
-        $returnVoucher->load(['customer', 'branch', 'items.product', 'creator']);
-        return new ReturnVoucherResource($returnVoucher);
+        return response()->json([
+            'data' => IssueVoucherResource::make($returnVoucher->load([
+                'customer', 
+                'branch', 
+                'items.product', 
+                'creator'
+            ]))
+        ]);
     }
 
     /**
@@ -204,7 +213,7 @@ class ReturnVoucherController extends Controller
         $user = $request->user();
 
         // Check access: admin sees all, regular users need access to branch
-        if (!$user->hasRole('super-admin')) {
+        if (!$user->hasRole(['super-admin', 'manager'])) {
             if (!$user->canAccessBranch($returnVoucher->branch_id)) {
                 return response()->json([
                     'message' => 'ليس لديك صلاحية لطباعة هذا الإذن'
@@ -218,17 +227,7 @@ class ReturnVoucherController extends Controller
             'voucher' => $returnVoucher
         ]);
 
-        // Set paper size and orientation
-        $pdf->setPaper('a4', 'portrait');
-
-        // Return PDF as download or inline view
-        $filename = 'return-voucher-' . $returnVoucher->voucher_number . '.pdf';
-        
-        if ($request->has('download')) {
-            return $pdf->download($filename);
-        }
-        
-        return $pdf->stream($filename);
+        return $pdf->download("return-voucher-{$returnVoucher->voucher_number}.pdf");
     }
 
     /**
@@ -250,7 +249,7 @@ class ReturnVoucherController extends Controller
         $user = $request->user();
 
         // Check permissions: regular users need full_access on the branch
-        if (!$user->hasRole('super-admin')) {
+        if (!$user->hasRole(['super-admin', 'manager'])) {
             if (!$user->hasFullAccessToBranch($returnVoucher->branch_id)) {
                 return response()->json([
                     'message' => 'ليس لديك صلاحية كاملة لإلغاء أذونات المرتجع في هذا الفرع'

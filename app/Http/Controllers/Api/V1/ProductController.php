@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\Api\V1\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +18,7 @@ class ProductController extends Controller
      * عرض قائمة المنتجات مع فلترة وبحث متقدم
      * 
      * GET /api/v1/products
-     * Query params: ?search=led&category_id=1&is_active=1&per_page=15
+     * Query params: ?search=led&category_id=1&product_classification=parts&is_active=1&per_page=15
      */
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -33,6 +35,11 @@ class ProductController extends Controller
         // فلترة حسب التصنيف
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
+        }
+
+        // فلترة حسب نوع المنتج (classification)
+        if ($request->filled('product_classification')) {
+            $query->byClassification($request->product_classification);
         }
 
         // فلترة حسب الحالة
@@ -59,7 +66,7 @@ class ProductController extends Controller
      * 
      * Note: يحتاج full_access على المخزن
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreProductRequest $request): JsonResponse
     {
         $user = $request->user();
         
@@ -74,37 +81,29 @@ class ProductController extends Controller
             }
         }
 
-        $validated = $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'name' => 'required|string|max:200|unique:products,name',
-            'brand' => 'nullable|string|max:100',
-            'description' => 'nullable|string',
-            'unit' => 'required|string|max:50',
-            'pack_size' => 'nullable|integer|min:1',
-            'purchase_price' => 'required|numeric|min:0',
-            'sale_price' => 'required|numeric|min:0|gte:purchase_price',
-            'min_stock' => 'required|integer|min:0',
-            'reorder_level' => 'nullable|integer|min:0',
-            'is_active' => 'boolean',
-            'initial_stock' => 'nullable|array',
-            'initial_stock.*.branch_id' => 'required|exists:branches,id',
-            'initial_stock.*.quantity' => 'required|integer|min:0',
-            'branch_min_qty_factory' => 'nullable|integer|min:0',
-            'branch_min_qty_ataba' => 'nullable|integer|min:0',
-            'branch_min_qty_imbaba' => 'nullable|integer|min:0',
-        ], [
-            'category_id.required' => __('product.validation.category_id.required'),
-            'name.required' => __('product.validation.name.required'),
-            'name.unique' => 'اسم المنتج موجود بالفعل',
-            'unit.required' => __('product.validation.unit.required'),
-            'purchase_price.required' => __('product.validation.purchase_price.required'),
-            'sale_price.required' => __('product.validation.sale_price.required'),
-            'sale_price.gte' => 'سعر البيع يجب أن يكون أكبر من أو يساوي سعر الشراء',
-            'min_stock.required' => __('product.validation.min_stock.required'),
-        ]);
+        $validated = $request->validated();
 
         DB::beginTransaction();
         try {
+            // Auto-generate SKU based on classification
+            $classification = $validated['product_classification'];
+            $prefix = Product::CLASSIFICATION_SKU_PREFIXES[$classification];
+            
+            // Get next number from last SKU of same classification
+            $lastProduct = Product::where('product_classification', $classification)
+                ->where('sku', 'like', $prefix . '-%')
+                ->orderBy('id', 'desc')
+                ->first();
+            
+            if ($lastProduct && $lastProduct->sku) {
+                $lastNumber = (int) substr($lastProduct->sku, strlen($prefix) + 1);
+                $nextNumber = $lastNumber + 1;
+            } else {
+                $nextNumber = 1;
+            }
+            
+            $validated['sku'] = $prefix . '-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+            
             // إنشاء المنتج
             $product = Product::create($validated);
 
@@ -179,7 +178,7 @@ class ProductController extends Controller
      * 
      * Note: يحتاج full_access
      */
-    public function update(Request $request, Product $product): JsonResponse
+    public function update(UpdateProductRequest $request, Product $product): JsonResponse
     {
         $user = $request->user();
         
@@ -194,67 +193,15 @@ class ProductController extends Controller
             }
         }
 
-        $validated = $request->validate([
-            'category_id' => 'sometimes|exists:categories,id',
-            'name' => 'sometimes|string|max:200|unique:products,name,' . $product->id,
-            'brand' => 'nullable|string|max:100',
-            'description' => 'nullable|string',
-            'unit' => 'sometimes|string|max:50',
-            'pack_size' => 'nullable|integer|min:1',
-            'purchase_price' => 'sometimes|numeric|min:0',
-            'sale_price' => 'sometimes|numeric|min:0',
-            'min_stock' => 'sometimes|integer|min:0',
-            'reorder_level' => 'nullable|integer|min:0',
-            'is_active' => 'sometimes|boolean',
-            'branch_min_qty_factory' => 'nullable|integer|min:0',
-            'branch_min_qty_ataba' => 'nullable|integer|min:0',
-            'branch_min_qty_imbaba' => 'nullable|integer|min:0',
-        ], [
-            'category_id.exists' => 'التصنيف غير موجود',
-            'name.unique' => 'اسم المنتج موجود بالفعل',
-            'sale_price.gte' => 'سعر البيع يجب أن يكون أكبر من أو يساوي سعر الشراء',
-        ]);
-
-        // التحقق من سعر البيع vs سعر الشراء
-        if (isset($validated['sale_price']) && isset($validated['purchase_price'])) {
-            if ($validated['sale_price'] < $validated['purchase_price']) {
-                return response()->json([
-                    'message' => 'خطأ في التحقق',
-                    'errors' => [
-                        'sale_price' => ['سعر البيع يجب أن يكون أكبر من أو يساوي سعر الشراء']
-                    ]
-                ], 422);
-            }
-        }
+        $validated = $request->validated();
 
         DB::beginTransaction();
         try {
-            // تحديث بيانات المنتج الأساسية
-            $productData = collect($validated)->except([
-                'branch_min_qty_factory', 
-                'branch_min_qty_ataba', 
-                'branch_min_qty_imbaba'
-            ])->toArray();
+            // Note: SKU لا يتغير عند التحديث (auto-generated once at creation)
+            unset($validated['sku']);
             
-            $product->update($productData);
-
-            // تحديث الحدود الدنيا للفروع إذا تم إرسالها
-            if ($request->hasAny(['branch_min_qty_factory', 'branch_min_qty_ataba', 'branch_min_qty_imbaba'])) {
-                $branchMinData = [
-                    'FAC' => $request->branch_min_qty_factory,
-                    'ATB' => $request->branch_min_qty_ataba,
-                    'IMB' => $request->branch_min_qty_imbaba,
-                ];
-
-                $branches = \App\Models\Branch::all();
-                foreach ($branches as $branch) {
-                    if (isset($branchMinData[$branch->code]) && $branchMinData[$branch->code] !== null) {
-                        $product->branchStocks()
-                            ->where('branch_id', $branch->id)
-                            ->update(['min_qty' => $branchMinData[$branch->code]]);
-                    }
-                }
-            }
+            // تحديث بيانات المنتج
+            $product->update($validated);
 
             DB::commit();
 

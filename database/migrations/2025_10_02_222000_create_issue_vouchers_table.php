@@ -34,7 +34,7 @@ return new class extends Migration
             $table->text('notes')->nullable()->comment('ملاحظات');
             $table->decimal('total_amount', 12, 2)->default(0)->comment('إجمالي المبلغ');
             
-            $table->enum('status', ['completed', 'cancelled'])->default('completed')->comment('الحالة');
+            $table->enum('status', ['PENDING', 'APPROVED', 'completed', 'cancelled'])->default('PENDING')->comment('الحالة');
             
             // من قام بإنشاء الإذن
             $table->foreignId('created_by')

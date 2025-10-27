@@ -205,59 +205,7 @@ const IssueVouchersPage = () => {
   // 2. Computed values that depend on basic functions
   // 3. Effects that depend on computed values
 
-  // Mock data for demonstration
-  const mockVouchers = [
-    {
-      id: 1,
-      voucher_number: 'ISS-2024-001',
-      customer_name: 'أحمد محمد علي',
-      date: '2024-01-15',
-      total_amount: 5500,
-      status: 'completed',
-      items_count: 3,
-      created_at: '2024-01-15 10:30:00'
-    },
-    {
-      id: 2,
-      voucher_number: 'ISS-2024-002',
-      customer_name: 'فاطمة حسن',
-      date: '2024-01-15',
-      total_amount: 2300,
-      status: 'pending',
-      items_count: 2,
-      created_at: '2024-01-15 11:15:00'
-    },
-    {
-      id: 3,
-      voucher_number: 'ISS-2024-003',
-      customer_name: 'محمود السيد',
-      date: '2024-01-14',
-      total_amount: 8750,
-      status: 'completed',
-      items_count: 5,
-      created_at: '2024-01-14 14:20:00'
-    },
-    {
-      id: 4,
-      voucher_number: 'ISS-2024-004',
-      customer_name: 'نور الدين',
-      date: '2024-01-14',
-      total_amount: 1200,
-      status: 'cancelled',
-      items_count: 1,
-      created_at: '2024-01-14 16:45:00'
-    },
-    {
-      id: 5,
-      voucher_number: 'ISS-2024-005',
-      customer_name: 'سارة أحمد',
-      date: '2024-01-13',
-      total_amount: 4500,
-      status: 'completed',
-      items_count: 4,
-      created_at: '2024-01-13 09:30:00'
-    }
-  ];
+  // Mock data removed - using real API data only
 
   useEffect(() => {
     fetchVouchers();
@@ -297,12 +245,9 @@ const IssueVouchersPage = () => {
       
     } catch (error) {
       console.error('❌ Error fetching vouchers:', error);
-      
-      // Fallback to mock data
-      setTimeout(() => {
-        setVouchers(mockVouchers);
-        setTotalItems(mockVouchers.length);
-      }, 100);
+      setVouchers([]);
+      setTotalItems(0);
+      setError('فشل في تحميل أذون الصرف');
     } finally {
       setLoading(false);
     }

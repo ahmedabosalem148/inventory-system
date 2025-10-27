@@ -40,6 +40,7 @@ interface ReturnVoucherFormData {
   branch_id: number | null
   return_date: string
   reason: string
+  reason_category: string
   notes: string
   items: ReturnVoucherItem[]
   status: 'draft' | 'approved'
@@ -64,6 +65,7 @@ export default function ReturnVoucherDialog({
     branch_id: null,
     return_date: new Date().toISOString().split('T')[0],
     reason: '',
+    reason_category: '',
     notes: '',
     items: [],
     status: 'draft',
@@ -415,9 +417,33 @@ export default function ReturnVoucherDialog({
               onChange={handleChange}
               placeholder="اذكر سبب الإرجاع..."
               rows={2}
+              maxLength={500}
               className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.reason.length}/500 حرف
+            </p>
+          </div>
+
+          {/* Reason Category */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              تصنيف السبب
+            </label>
+            <select
+              name="reason_category"
+              value={formData.reason_category}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border rounded-md"
+            >
+              <option value="">اختر التصنيف (اختياري)</option>
+              <option value="damaged">تالف</option>
+              <option value="defective">معيب</option>
+              <option value="customer_request">طلب العميل</option>
+              <option value="wrong_item">منتج خاطئ</option>
+              <option value="other">أخرى</option>
+            </select>
           </div>
 
           {/* Items Table */}

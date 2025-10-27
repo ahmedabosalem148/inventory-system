@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\PaymentResource;
 use App\Models\Payment;
 use App\Models\Cheque;
+use App\Rules\UniqueChequeNumber;
 use App\Services\LedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -68,10 +69,37 @@ class PaymentController extends Controller
             
             // حقول الشيك (إذا كانت الطريقة شيك)
             'cheque_number' => 'required_if:payment_method,cheque|string',
-            'cheque_date' => 'required_if:payment_method,cheque|date',
-            'cheque_due_date' => 'required_if:payment_method,cheque|date',
+            'cheque_date' => [
+                'required_if:payment_method,cheque',
+                'date',
+                'after_or_equal:' . now()->subYears(2)->format('Y-m-d')
+            ],
+            'cheque_due_date' => [
+                'required_if:payment_method,cheque',
+                'date',
+                'after_or_equal:cheque_date'
+            ],
             'bank_name' => 'required_if:payment_method,cheque|string',
         ]);
+        
+        // Additional validation for cheque
+        if ($validated['payment_method'] === 'cheque') {
+            $validator = validator($validated, [
+                'cheque_number' => [
+                    'required',
+                    new UniqueChequeNumber(
+                        bankName: $validated['bank_name']
+                    )
+                ]
+            ]);
+            
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'خطأ في التحقق من بيانات الشيك',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+        }
 
         try {
             DB::beginTransaction();

@@ -5,7 +5,6 @@
 
 import { FileText, TrendingDown, Users, DollarSign, Package, BarChart3, FileBarChart } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { useNavigate } from 'react-router-dom'
 
 interface ReportCard {
   id: string
@@ -17,7 +16,10 @@ interface ReportCard {
 }
 
 export function ReportsPage() {
-  const navigate = useNavigate()
+  const handleNavigate = (path: string) => {
+    // Use hash navigation instead of React Router
+    window.location.hash = path.replace('/reports/', 'reports/')
+  }
 
   const inventoryReports: ReportCard[] = [
     {
@@ -104,7 +106,7 @@ export function ReportsPage() {
       <Card
         key={report.id}
         className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${colors.hover}`}
-        onClick={() => navigate(report.path)}
+        onClick={() => handleNavigate(report.path)}
       >
         <CardContent className="p-6">
           <div className="flex items-start gap-4">

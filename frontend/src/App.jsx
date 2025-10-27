@@ -10,6 +10,8 @@ import CustomerProfilePage from './pages/Customers/CustomerProfilePage';
 import ReturnVouchersPage from './pages/ReturnVouchers/ReturnVouchersPage';
 import IssueVoucherDetailsPage from './pages/Vouchers/IssueVoucherDetailsPage';
 import ReturnVoucherDetailsPage from './pages/Vouchers/ReturnVoucherDetailsPage';
+import StockValuationReport from './pages/Reports/StockValuationReport';
+import ReportsPage from './pages/Reports/ReportsPage';
 
 function App() {
   return (
@@ -88,6 +90,24 @@ function App() {
             element={
               <ProtectedRoute>
                 <ReturnVouchersPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/reports" 
+            element={
+              <ProtectedRoute>
+                <ReportsPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/reports/stock-valuation" 
+            element={
+              <ProtectedRoute>
+                <StockValuationReport />
               </ProtectedRoute>
             } 
           />

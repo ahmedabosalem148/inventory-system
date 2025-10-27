@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\IssueVoucherResource;
 use App\Models\IssueVoucher;
+use App\Models\Product;
+use App\Rules\MaxDiscountValue;
+use App\Rules\SufficientStock;
 use App\Services\InventoryService;
 use App\Services\LedgerService;
 use App\Services\SequencerService;
@@ -30,8 +33,9 @@ class IssueVoucherController extends Controller
         
         $query = IssueVoucher::with(['customer', 'branch', 'items.product']);
 
-        // Admin can see all or filter by branch, regular users see only their branch
-        if (!$user->hasRole('super-admin')) {
+        // Super admin و manager و accounting يرون كل شيء
+        if (!$user->hasRole(['super-admin', 'manager', 'accounting', 'accountant'])) {
+            // باقي المستخدمين يرون فرعهم فقط
             $activeBranch = $user->getActiveBranch();
             if (!$activeBranch) {
                 return response()->json([
@@ -40,7 +44,7 @@ class IssueVoucherController extends Controller
             }
             $query->where('branch_id', $activeBranch->id);
         } elseif ($request->filled('branch_id')) {
-            // Admin can optionally filter by branch
+            // Admin و manager و accounting يمكنهم الفلترة حسب الفرع
             $query->where('branch_id', $request->branch_id);
         }
 
@@ -92,6 +96,21 @@ class IssueVoucherController extends Controller
             'branch_id' => 'required|exists:branches,id',
             'issue_date' => 'required|date',
             'notes' => 'nullable|string',
+            
+            // Transfer fields
+            'issue_type' => ['required', Rule::in(['SALE', 'TRANSFER'])],
+            'target_branch_id' => [
+                'required_if:issue_type,TRANSFER',
+                'nullable',
+                'exists:branches,id',
+                'different:branch_id'
+            ],
+            'payment_type' => [
+                'required_if:issue_type,SALE',
+                'nullable',
+                Rule::in(['CASH', 'CREDIT'])
+            ],
+            
             // Header discount (خصم الفاتورة)
             'discount_type' => ['nullable', Rule::in(['none', 'fixed', 'percentage'])],
             'discount_value' => 'nullable|numeric|min:0',
@@ -107,8 +126,105 @@ class IssueVoucherController extends Controller
             'items.*.discount_amount' => 'nullable|numeric|min:0', // للتوافق مع الكود القديم
         ]);
 
+        // Additional validation: Check sufficient stock for each item
+        $warnings = [];
+        
+        foreach ($validated['items'] as $index => $item) {
+            $validator = validator($item, [
+                'quantity' => [
+                    'required',
+                    'numeric',
+                    'min:0.01',
+                    new SufficientStock(
+                        productId: $item['product_id'],
+                        branchId: $validated['branch_id']
+                    )
+                ]
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'خطأ في التحقق من المخزون',
+                    'errors' => [
+                        "items.{$index}.quantity" => $validator->errors()->first('quantity')
+                    ]
+                ], 422);
+            }
+            
+            // Check pack size warning
+            $product = Product::find($item['product_id']);
+            if ($product && $product->pack_size && $product->pack_size > 1) {
+                $remainder = fmod($item['quantity'], $product->pack_size);
+                if ($remainder != 0) {
+                    $warnings[] = [
+                        'item_index' => $index,
+                        'product_name' => $product->name,
+                        'quantity' => $item['quantity'],
+                        'pack_size' => $product->pack_size,
+                        'message' => "تحذير: الكمية ({$item['quantity']}) ليست من مضاعفات حجم العبوة ({$product->pack_size}) للمنتج '{$product->name}'"
+                    ];
+                }
+            }
+        }
+
+        // Validate discounts on line items
+        foreach ($validated['items'] as $index => $item) {
+            if (!empty($item['discount_type']) && $item['discount_type'] !== 'none') {
+                $itemTotal = $item['quantity'] * $item['unit_price'];
+                
+                $validator = validator($item, [
+                    'discount_value' => [
+                        'required',
+                        'numeric',
+                        'min:0',
+                        new MaxDiscountValue(
+                            discountType: $item['discount_type'],
+                            totalAmount: $itemTotal
+                        )
+                    ]
+                ]);
+
+                if ($validator->fails()) {
+                    return response()->json([
+                        'message' => 'خطأ في التحقق من الخصم',
+                        'errors' => [
+                            "items.{$index}.discount_value" => $validator->errors()->first('discount_value')
+                        ]
+                    ], 422);
+                }
+            }
+        }
+
+        // Validate header discount (after calculating subtotal)
+        if (!empty($validated['discount_type']) && $validated['discount_type'] !== 'none') {
+            $subtotal = 0;
+            foreach ($validated['items'] as $item) {
+                $itemCalculations = $this->calculateItemTotals($item);
+                $subtotal += $itemCalculations['net_price'];
+            }
+
+            $validator = validator($validated, [
+                'discount_value' => [
+                    'required',
+                    'numeric',
+                    'min:0',
+                    new MaxDiscountValue(
+                        discountType: $validated['discount_type'],
+                        totalAmount: $subtotal
+                    )
+                ]
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'خطأ في التحقق من خصم الفاتورة',
+                    'errors' => $validator->errors()->toArray()
+                ], 422);
+            }
+        }
+
         // Check permissions: regular users need full_access on the branch
-        if (!$user->hasRole('super-admin')) {
+        if (!$user->hasRole(['super-admin', 'manager'])) {
             $branchId = $validated['branch_id'];
             
             if (!$user->hasFullAccessToBranch($branchId)) {
@@ -184,7 +300,15 @@ class IssueVoucherController extends Controller
 
             DB::commit();
 
-            return new IssueVoucherResource($voucher->load(['customer', 'branch', 'items.product']));
+            $response = [
+                'data' => new IssueVoucherResource($voucher->load(['customer', 'branch', 'items.product']))
+            ];
+            
+            if (!empty($warnings)) {
+                $response['warnings'] = $warnings;
+            }
+            
+            return response()->json($response, 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([

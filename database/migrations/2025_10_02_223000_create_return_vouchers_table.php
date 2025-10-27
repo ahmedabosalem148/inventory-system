@@ -34,8 +34,8 @@ return new class extends Migration
             $table->decimal('total_amount', 12, 2)->default(0)->comment('إجمالي المبلغ');
             
             // Status
-            $table->enum('status', ['completed', 'cancelled'])
-                ->default('completed')
+            $table->enum('status', ['PENDING', 'APPROVED', 'completed', 'cancelled'])
+                ->default('PENDING')
                 ->comment('حالة الإذن');
             
             $table->text('notes')->nullable()->comment('ملاحظات');

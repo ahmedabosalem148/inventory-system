@@ -33,6 +33,8 @@ class PurchaseOrder extends Model
         'created_by',
         'approved_by',
         'approved_at',
+        'print_count',
+        'last_printed_at',
     ];
 
     protected $casts = [
@@ -82,11 +84,27 @@ class PurchaseOrder extends Model
     }
 
     /**
+     * Alias for creator relationship
+     */
+    public function createdBy()
+    {
+        return $this->creator();
+    }
+
+    /**
      * علاقة مع المستخدم الذي اعتمد الطلب
      */
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Alias for approver relationship
+     */
+    public function approvedBy()
+    {
+        return $this->approver();
     }
 
     /**

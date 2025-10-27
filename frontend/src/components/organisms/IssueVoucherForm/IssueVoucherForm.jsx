@@ -43,25 +43,6 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
   const customersAbort = useRef(null);
   const productsAbort = useRef(null);
 
-  // Mock data for customers (TODO: Replace with API)
-  const mockCustomers = [
-    { id: 1, name: 'أحمد محمد علي', phone: '01234567890', balance: 5000 },
-    { id: 2, name: 'فاطمة حسن', phone: '01123456789', balance: 2000 },
-    { id: 3, name: 'محمود السيد', phone: '01098765432', balance: 8000 },
-    { id: 4, name: 'نور الدين', phone: '01156789012', balance: 1500 },
-    { id: 5, name: 'سارة أحمد', phone: '01245678901', balance: 3000 }
-  ];
-
-  // Mock data for products (TODO: Replace with API)
-  const mockProducts = [
-    { id: 1, name: 'لابتوب Dell XPS', unit: 'قطعة', price: 25000, stock: 15 },
-    { id: 2, name: 'قميص قطن', unit: 'قطعة', price: 150, stock: 50 },
-    { id: 3, name: 'أرز بسمتي', unit: 'كيلوجرام', price: 25, stock: 200 },
-    { id: 4, name: 'كتاب PHP', unit: 'قطعة', price: 120, stock: 30 },
-    { id: 5, name: 'مفك كهربائي', unit: 'قطعة', price: 450, stock: 20 },
-    { id: 6, name: 'آيفون 15', unit: 'قطعة', price: 45000, stock: 8 }
-  ];
-
   useEffect(() => {
     if (voucher) {
       setFormData({
@@ -123,12 +104,8 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
           customersCache.current[searchTerm] = result;
         } catch (error) {
           if (error.code === 'ERR_CANCELED' || error.name === 'CanceledError') return;
-          // Fallback to mock data
-          const filtered = mockCustomers.filter(c =>
-            c.name.includes(searchTerm) || c.phone.includes(searchTerm)
-          );
-          setCustomers(filtered);
-          customersCache.current[searchTerm] = filtered;
+          console.error('Failed to search customers:', error);
+          setCustomers([]);
         } finally {
           setLoadingCustomers(false);
         }
@@ -172,12 +149,8 @@ const IssueVoucherForm = ({ voucher, onSubmit, onClose }) => {
           productsCache.current[searchTerm] = result;
         } catch (error) {
           if (error.code === 'ERR_CANCELED' || error.name === 'CanceledError') return;
-          // Fallback to mock data
-          const filtered = mockProducts.filter(p =>
-            p.name.includes(searchTerm)
-          );
-          setProducts(filtered);
-          productsCache.current[searchTerm] = filtered;
+          console.error('Failed to search products:', error);
+          setProducts([]);
         } finally {
           setLoadingProducts(false);
         }

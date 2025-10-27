@@ -81,8 +81,8 @@ export async function bulkUpdateProducts(products: UpdateProductInput[]): Promis
 /**
  * Get product categories
  */
-export async function getProductCategories(): Promise<string[]> {
-  const response = await apiClient.get<{ data: string[] }>('/products/categories')
+export async function getProductCategories(): Promise<Array<{id: number, name: string}>> {
+  const response = await apiClient.get<{ data: Array<{id: number, name: string}> }>('/categories')
   return response.data.data
 }
 

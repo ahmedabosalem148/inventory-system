@@ -86,6 +86,13 @@ Route::prefix('v1')
     // ========================================================================
     Route::apiResource('branches', BranchController::class)->names('api.branches');
     
+    // Categories
+    Route::get('categories', function () {
+        return response()->json([
+            'data' => \App\Models\Category::orderBy('name')->get(),
+        ]);
+    })->name('api.categories.index');
+    
     // Product branch minimum stock management
     Route::get('products/{product}/branch-min-stock', [ProductController::class, 'getBranchMinStock'])
         ->name('api.products.branch-min-stock.index');
@@ -101,6 +108,10 @@ Route::prefix('v1')
         ->name('api.customers.statistics');
     Route::get('customers/{customer}/statement', [CustomerController::class, 'getStatement'])
         ->name('api.customers.statement');
+    Route::get('customers/{customer}/statement/pdf', [CustomerController::class, 'exportStatementPDF'])
+        ->name('api.customers.statement.pdf');
+    Route::get('customers/{customer}/statement/excel', [CustomerController::class, 'exportStatementExcel'])
+        ->name('api.customers.statement.excel');
     Route::get('customers/{customer}/balance', [CustomerController::class, 'getBalance'])
         ->name('api.customers.balance');
     Route::get('customers/{customer}/activity', [CustomerController::class, 'getActivity'])
@@ -174,14 +185,45 @@ Route::prefix('v1')
     Route::prefix('reports')->name('api.reports.')->group(function () {
         // Inventory reports
         Route::get('inventory', [ReportController::class, 'inventory'])->name('inventory');
-        Route::get('inventory/low-stock', [ReportController::class, 'lowStock'])->name('low-stock');
         Route::get('inventory/movements', [ReportController::class, 'movements'])->name('movements');
         
-        // Customer reports
+        // Stock Valuation Report
+        Route::get('stock-valuation', [ReportController::class, 'stockValuation'])->name('stock-valuation');
+        Route::get('stock-valuation/pdf', [ReportController::class, 'stockValuationPDF'])->name('stock-valuation-pdf');
+        Route::get('stock-valuation/excel', [ReportController::class, 'stockValuationExcel'])->name('stock-valuation-excel');
+        
+        // Stock Summary Report
+        Route::get('stock-summary', [ReportController::class, 'stockSummary'])->name('stock-summary');
+        Route::get('stock-summary/pdf', [ReportController::class, 'stockSummaryPDF'])->name('stock-summary-pdf');
+        Route::get('stock-summary/excel', [ReportController::class, 'stockSummaryExcel'])->name('stock-summary-excel');
+        
+        // Low Stock Report
+        Route::get('low-stock', [ReportController::class, 'lowStock'])->name('low-stock');
+        Route::get('low-stock/pdf', [ReportController::class, 'lowStockPDF'])->name('low-stock-pdf');
+        Route::get('low-stock/excel', [ReportController::class, 'lowStockExcel'])->name('low-stock-excel');
+        
+        // Product Movement Report
+        Route::get('product-movement', [ReportController::class, 'productMovement'])->name('product-movement');
+        Route::get('product-movement/pdf', [ReportController::class, 'productMovementPDF'])->name('product-movement-pdf');
+        Route::get('product-movement/excel', [ReportController::class, 'productMovementExcel'])->name('product-movement-excel');
+        
+        // Customer Balances Report
+        Route::get('customer-balances', [ReportController::class, 'customerBalances'])->name('customer-balances');
+        Route::get('customer-balances/pdf', [ReportController::class, 'customerBalancesPDF'])->name('customer-balances-pdf');
+        Route::get('customer-balances/excel', [ReportController::class, 'customerBalancesExcel'])->name('customer-balances-excel');
+        
+        // Customer Statement Report
         Route::get('customers/{customer}/statement', [ReportController::class, 'customerStatement'])
             ->name('customer-statement');
+        
+        // Sales Report
+        Route::get('sales-summary', [ReportController::class, 'salesReport'])->name('sales-report');
+        Route::get('sales-summary/pdf', [ReportController::class, 'salesReportPDF'])->name('sales-report-pdf');
+        Route::get('sales-summary/excel', [ReportController::class, 'salesReportExcel'])->name('sales-report-excel');
+        
+        // Old routes - keeping for compatibility
         Route::get('customers/balances', [ReportController::class, 'customerBalances'])
-            ->name('customer-balances');
+            ->name('customer-balances-old');
         
         // Sales reports
         Route::get('sales/summary', [ReportController::class, 'salesSummary'])->name('sales-summary');
@@ -210,6 +252,35 @@ Route::prefix('v1')
         Route::get('sales/comparison', [\App\Http\Controllers\Api\V1\SalesReportController::class, 'comparison'])->name('sales-comparison');
         Route::get('sales/top-customers', [\App\Http\Controllers\Api\V1\SalesReportController::class, 'topCustomers'])->name('sales-top-customers');
         Route::get('sales/summary', [\App\Http\Controllers\Api\V1\SalesReportController::class, 'summary'])->name('sales-summary');
+    });
+
+    // ========================================================================
+    // Print System (VALIDATION-PHASE-0)
+    // ========================================================================
+    Route::prefix('print')->name('api.print.')->group(function () {
+        Route::get('issue-voucher/{id}', [\App\Http\Controllers\Api\V1\PrintController::class, 'printIssueVoucher'])
+            ->name('issue-voucher')
+            ->middleware('can:print-issue-vouchers');
+        
+        Route::get('return-voucher/{id}', [\App\Http\Controllers\Api\V1\PrintController::class, 'printReturnVoucher'])
+            ->name('return-voucher')
+            ->middleware('can:print-return-vouchers');
+        
+        Route::get('purchase-order/{id}', [\App\Http\Controllers\Api\V1\PrintController::class, 'printPurchaseOrder'])
+            ->name('purchase-order')
+            ->middleware('can:print-purchase-orders');
+        
+        Route::get('customer-statement/{customerId}', [\App\Http\Controllers\Api\V1\PrintController::class, 'printCustomerStatement'])
+            ->name('customer-statement')
+            ->middleware('can:print-customer-statements');
+        
+        Route::get('cheque/{id}', [\App\Http\Controllers\Api\V1\PrintController::class, 'printCheque'])
+            ->name('cheque')
+            ->middleware('can:print-cheques');
+        
+        Route::post('bulk', [\App\Http\Controllers\Api\V1\PrintController::class, 'bulkPrint'])
+            ->name('bulk')
+            ->middleware('can:bulk-print');
     });
 
     // ========================================================================

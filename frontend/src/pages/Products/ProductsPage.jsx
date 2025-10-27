@@ -175,73 +175,13 @@ const ProductsPage = () => {
       setTotalItems(response.data.total || 0);
     } catch (error) {
       console.error('Failed to fetch products:', error);
-      // For demo, use mock data
-      setProducts(mockProducts);
-      setTotalItems(mockProducts.length);
+      // Show error message to user
+      setProducts([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
   }, [currentPage, itemsPerPage, sortField, sortDirection, filters]);
-
-  // Mock data for demo (matching actual database structure)
-  const mockProducts = [
-    {
-      id: 1,
-      name: 'لابتوب Dell XPS 13',
-      description: 'لابتوب عالي الأداء للاستخدام المكتبي والتصميم',
-      category: { id: 1, name: 'إلكترونيات' },
-      unit: 'قطعة',
-      purchase_price: 45000,
-      sale_price: 55000,
-      min_stock: 5,
-      pack_size: 1,
-      reorder_level: 5,
-      is_active: true,
-      created_at: '2024-01-15'
-    },
-    {
-      id: 2,
-      name: 'قميص قطني أزرق',
-      description: 'قميص رجالي قطن 100% مقاس كبير',
-      category: { id: 2, name: 'ملابس' },
-      unit: 'قطعة',
-      purchase_price: 150,
-      sale_price: 250,
-      min_stock: 10,
-      pack_size: 1,
-      reorder_level: 10,
-      is_active: true,
-      created_at: '2024-01-14'
-    },
-    {
-      id: 3,
-      name: 'أرز بسمتي',
-      description: 'أرز بسمتي هندي فاخر كيس 5 كيلو',
-      category: { id: 3, name: 'مواد غذائية' },
-      unit: 'كيلو',
-      purchase_price: 25,
-      sale_price: 35,
-      min_stock: 50,
-      pack_size: 5,
-      reorder_level: 50,
-      is_active: true,
-      created_at: '2024-01-13'
-    },
-    {
-      id: 4,
-      name: 'كتاب البرمجة بـ PHP',
-      description: 'كتاب شامل لتعلم لغة البرمجة PHP',
-      category: { id: 4, name: 'كتب' },
-      unit: 'قطعة',
-      purchase_price: 80,
-      sale_price: 120,
-      min_stock: 20,
-      pack_size: 1,
-      reorder_level: 20,
-      is_active: true,
-      created_at: '2024-01-12'
-    }
-  ];
 
   // Load products on mount and when dependencies change
   useEffect(() => {

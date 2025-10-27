@@ -74,12 +74,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit-cheques',
             'clear-cheques',
             'return-cheques',
+            'print-cheques', // Added for Phase 0
 
             // التقارير
             'view-inventory-reports',
             'view-customer-reports',
             'view-financial-reports',
             'export-reports',
+
+            // Print System (VALIDATION-PHASE-0)
+            'print-issue-vouchers',
+            'print-return-vouchers',
+            'print-purchase-orders',
+            'print-customer-statements',
+            'bulk-print',
 
             // الاستيراد
             'import-data',

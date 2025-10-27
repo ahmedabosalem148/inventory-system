@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog } from '@/components/ui/dialog'
 import { toast } from 'react-hot-toast'
 import { createProduct, updateProduct, getProductCategories } from '@/services/api/products'
-import type { Product, CreateProductInput } from '@/types'
+import type { Product, CreateProductInput, ProductClassification } from '@/types'
 
 interface ProductDialogProps {
   product: Product | null
@@ -19,21 +19,21 @@ interface ProductDialogProps {
 
 export function ProductDialog({ product, onClose }: ProductDialogProps) {
   const [loading, setLoading] = useState(false)
-  const [categories, setCategories] = useState<string[]>([])
+  const [categories, setCategories] = useState<any[]>([])
   
   // Form state
   const [formData, setFormData] = useState<CreateProductInput>({
     name: '',
     brand: '',
-    sku: '',
     description: '',
+    product_classification: 'finished_product' as ProductClassification,
+    category_id: 0,
     unit: 'قطعة',
-    pack_size: 1,
-    min_stock_level: 10,
-    price: 0,
-    cost: 0,
-    category: '',
-    barcode: '',
+    pack_size: null,
+    purchase_price: 0,
+    sale_price: 0,
+    min_stock: 10,
+    reorder_level: 5,
     is_active: true,
   })
 
@@ -49,23 +49,18 @@ export function ProductDialog({ product, onClose }: ProductDialogProps) {
    */
   useEffect(() => {
     if (product) {
-      // Handle category (can be string or object)
-      const categoryValue = typeof product.category === 'string' 
-        ? product.category 
-        : product.category?.name || ''
-      
       setFormData({
         name: product.name,
         brand: product.brand || '',
-        sku: product.sku,
         description: product.description || '',
+        product_classification: product.product_classification || 'finished_product',
+        category_id: product.category_id || 0,
         unit: product.unit,
         pack_size: product.pack_size,
-        min_stock_level: product.min_stock_level,
-        price: product.price,
-        cost: product.cost || 0,
-        category: categoryValue,
-        barcode: product.barcode || '',
+        purchase_price: product.purchase_price || product.cost || 0,
+        sale_price: product.sale_price || product.price || 0,
+        min_stock: product.min_stock_level || 10,
+        reorder_level: product.reorder_level || 5,
         is_active: product.is_active !== false,
       })
     }
@@ -98,18 +93,36 @@ export function ProductDialog({ product, onClose }: ProductDialogProps) {
       toast.error('اسم المنتج مطلوب')
       return false
     }
-    if (!formData.sku.trim()) {
-      toast.error('كود المنتج مطلوب')
+    if (!formData.category_id || formData.category_id === 0) {
+      toast.error('يجب اختيار التصنيف')
       return false
     }
-    if (formData.price <= 0) {
-      toast.error('السعر يجب أن يكون أكبر من صفر')
+    if (!formData.product_classification) {
+      toast.error('يجب اختيار نوع المنتج')
       return false
     }
-    if (formData.pack_size <= 0) {
-      toast.error('حجم العبوة يجب أن يكون أكبر من صفر')
+    if (formData.purchase_price <= 0) {
+      toast.error('سعر الشراء يجب أن يكون أكبر من صفر')
       return false
     }
+    if (formData.sale_price <= 0) {
+      toast.error('سعر البيع يجب أن يكون أكبر من صفر')
+      return false
+    }
+    
+    // Validation للمنتجات التامة: sale_price >= purchase_price
+    if (formData.product_classification === 'finished_product' && formData.sale_price < formData.purchase_price) {
+      toast.error('سعر البيع يجب أن يكون أكبر من أو يساوي سعر الشراء للمنتجات التامة')
+      return false
+    }
+    
+    // Validation للأجزاء والبلاستيك والألومنيوم: pack_size required
+    const requiresPackSize = ['parts', 'plastic_parts', 'aluminum_parts'].includes(formData.product_classification)
+    if (requiresPackSize && (!formData.pack_size || formData.pack_size <= 0)) {
+      toast.error('حجم العبوة مطلوب لهذا النوع من المنتجات')
+      return false
+    }
+    
     return true
   }
 
@@ -144,7 +157,20 @@ export function ProductDialog({ product, onClose }: ProductDialogProps) {
     }
   }
 
-  const units = ['قطعة', 'كرتونة', 'كيس', 'علبة', 'زجاجة', 'عبوة']
+  const units = ['قطعة', 'كرتونة', 'كيس', 'علبة', 'زجاجة', 'عبوة', 'كجم', 'جرام', 'لتر', 'متر']
+  
+  const classificationOptions = [
+    { value: 'finished_product', label: 'منتج تام' },
+    { value: 'semi_finished', label: 'منتج غير تام' },
+    { value: 'parts', label: 'أجزاء' },
+    { value: 'plastic_parts', label: 'بلاستيك' },
+    { value: 'aluminum_parts', label: 'ألومنيوم' },
+    { value: 'raw_material', label: 'مواد خام' },
+    { value: 'other', label: 'أخرى' },
+  ]
+  
+  // Check if pack_size is required based on classification
+  const requiresPackSize = ['parts', 'plastic_parts', 'aluminum_parts'].includes(formData.product_classification)
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose(false)}>
@@ -183,21 +209,39 @@ export function ProductDialog({ product, onClose }: ProductDialogProps) {
               placeholder="مثال: Samsung, LG, Philips (اختياري)"
             />
 
-            {/* SKU & Barcode */}
+            {/* Product Classification & Category */}
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="كود المنتج (SKU)"
-                value={formData.sku}
-                onChange={(e) => handleChange('sku', e.target.value)}
-                placeholder="مثال: PRD-001"
-                required
-              />
-              <Input
-                label="الباركود"
-                value={formData.barcode}
-                onChange={(e) => handleChange('barcode', e.target.value)}
-                placeholder="اختياري"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  نوع المنتج <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.product_classification}
+                  onChange={(e) => handleChange('product_classification', e.target.value as ProductClassification)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  {classificationOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  التصنيف <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.category_id}
+                  onChange={(e) => handleChange('category_id', Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value={0}>اختر التصنيف</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Description */}
@@ -206,7 +250,7 @@ export function ProductDialog({ product, onClose }: ProductDialogProps) {
                 الوصف
               </label>
               <textarea
-                value={formData.description}
+                value={formData.description || ''}
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="أدخل وصف المنتج..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -214,79 +258,71 @@ export function ProductDialog({ product, onClose }: ProductDialogProps) {
               />
             </div>
 
-            {/* Category & Unit */}
+            {/* Unit & Pack Size */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  الفئة
-                </label>
-                <input
-                  list="categories"
-                  value={formData.category}
-                  onChange={(e) => handleChange('category', e.target.value)}
-                  placeholder="اختر أو أدخل فئة جديدة"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <datalist id="categories">
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat} />
-                  ))}
-                </datalist>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  الوحدة
+                  الوحدة <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.unit}
                   onChange={(e) => handleChange('unit', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
                 >
                   {units.map((u) => (
                     <option key={u} value={u}>{u}</option>
                   ))}
                 </select>
               </div>
-            </div>
-
-            {/* Pack Size & Min Stock */}
-            <div className="grid grid-cols-2 gap-4">
               <Input
-                label="حجم العبوة"
+                label={`حجم العبوة ${requiresPackSize ? ' *' : ' (اختياري)'}`}
                 type="number"
-                value={formData.pack_size}
-                onChange={(e) => handleChange('pack_size', Number(e.target.value))}
+                value={formData.pack_size || ''}
+                onChange={(e) => handleChange('pack_size', e.target.value ? Number(e.target.value) : null)}
                 min="1"
-                required
-              />
-              <Input
-                label="الحد الأدنى للمخزون"
-                type="number"
-                value={formData.min_stock_level}
-                onChange={(e) => handleChange('min_stock_level', Number(e.target.value))}
-                min="0"
-                required
+                required={requiresPackSize}
+                placeholder={requiresPackSize ? 'مطلوب' : 'اختياري'}
               />
             </div>
 
-            {/* Cost & Price */}
+            {/* Purchase Price & Sale Price */}
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="التكلفة"
+                label="سعر الشراء"
                 type="number"
                 step="0.01"
-                value={formData.cost}
-                onChange={(e) => handleChange('cost', Number(e.target.value))}
+                value={formData.purchase_price}
+                onChange={(e) => handleChange('purchase_price', Number(e.target.value))}
                 min="0"
+                required
               />
               <Input
                 label="سعر البيع"
                 type="number"
                 step="0.01"
-                value={formData.price}
-                onChange={(e) => handleChange('price', Number(e.target.value))}
+                value={formData.sale_price}
+                onChange={(e) => handleChange('sale_price', Number(e.target.value))}
                 min="0"
                 required
+              />
+            </div>
+
+            {/* Min Stock & Reorder Level */}
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="الحد الأدنى للمخزون"
+                type="number"
+                value={formData.min_stock || 0}
+                onChange={(e) => handleChange('min_stock', Number(e.target.value))}
+                min="0"
+              />
+              <Input
+                label="مستوى إعادة الطلب"
+                type="number"
+                value={formData.reorder_level || 0}
+                onChange={(e) => handleChange('reorder_level', Number(e.target.value))}
+                min="0"
               />
             </div>
 
@@ -302,6 +338,13 @@ export function ProductDialog({ product, onClose }: ProductDialogProps) {
               <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
                 منتج نشط
               </label>
+            </div>
+            
+            {/* SKU Auto-generation Notice */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-700">
+                ℹ️ سيتم توليد كود المنتج (SKU) تلقائياً بناءً على نوع المنتج
+              </p>
             </div>
           </div>
         </form>

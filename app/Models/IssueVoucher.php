@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class IssueVoucher extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'voucher_number',
         'customer_id',
@@ -26,6 +28,8 @@ class IssueVoucher extends Model
         'approved_at',
         'approved_by',
         'created_by',
+        'print_count',
+        'last_printed_at',
     ];
 
     protected $casts = [
@@ -80,11 +84,27 @@ class IssueVoucher extends Model
     }
 
     /**
+     * Alias for creator relationship (for consistency with PrintController)
+     */
+    public function createdBy()
+    {
+        return $this->creator();
+    }
+
+    /**
      * العلاقة مع المستخدم الذي اعتمد الإذن
      */
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Alias for approver relationship (for consistency with PrintController)
+     */
+    public function approvedBy()
+    {
+        return $this->approver();
     }
 
     /**

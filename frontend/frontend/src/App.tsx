@@ -19,7 +19,11 @@ import {
   StockSummaryReport, 
   LowStockReport, 
   ProductMovementsReport,
-  CustomerBalancesReport 
+  ProductMovementReport,
+  CustomerBalancesReport,
+  CustomerStatementReport,
+  SalesSummaryReport,
+  StockValuationReport
 } from '@/features/reports'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { UsersPage } from '@/features/users'
@@ -38,11 +42,9 @@ function App() {
     // Handle both #products and /login#products cases
     const fullHash = window.location.hash
     const hash = fullHash.slice(1) || 'dashboard'
-    console.log('🎯 Initial page:', hash, '| Full URL:', window.location.href)
     
     // Fix URL if it has /login or other paths - we're using hash routing only
     if (window.location.pathname !== '/') {
-      console.log('⚠️ Wrong pathname detected:', window.location.pathname, '- fixing...')
       const newUrl = window.location.origin + '/' + window.location.hash
       window.history.replaceState(null, '', newUrl)
     }
@@ -55,7 +57,6 @@ function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.slice(1) || 'dashboard'
-      console.log('🔄 Hash changed to:', hash)
       setCurrentPage(hash)
     }
 
@@ -63,7 +64,6 @@ function App() {
     if (!hasInitialized.current) {
       hasInitialized.current = true
       window.addEventListener('hashchange', handleHashChange)
-      console.log('✅ Hash listener registered')
     }
     
     // Don't cleanup - we want the listener to stay forever
@@ -72,13 +72,6 @@ function App() {
   
   // Log whenever currentPage or auth state changes
   useEffect(() => {
-    console.log('📄 Render:', {
-      currentPage,
-      isLoading,
-      isAuthenticated,
-      currentHash: window.location.hash,
-      hashMismatch: currentPage !== window.location.hash.slice(1)
-    })
     
     // IMPORTANT: Don't reset currentPage when auth state changes!
     // Keep the user on their current page
@@ -108,23 +101,18 @@ function App() {
       ? firstRole.toLowerCase() 
       : firstRole?.name?.toLowerCase()
     
-    console.log('👤 User Role:', userRole, '| Full user:', user)
-    
     switch (userRole) {
       case 'accounting':
       case 'accountant':
-        console.log('📊 Rendering AccountantDashboard')
         return <AccountantDashboard />
       case 'store_user':
       case 'store-manager':
-        console.log('📦 Rendering StoreManagerDashboard')
         return <StoreManagerDashboard />
       case 'manager':
       case 'super-admin':
-        console.log('👔 Rendering ManagerDashboard')
         return <ManagerDashboard />
       default:
-        console.log('⚠️ Unknown role, defaulting to ManagerDashboard')
+        return <ManagerDashboard />
         return <ManagerDashboard />
     }
   }
@@ -156,8 +144,16 @@ function App() {
           return <LowStockReport />
         case 'product-movements':
           return <ProductMovementsReport />
+        case 'product-movement':
+          return <ProductMovementReport />
         case 'customer-balances':
           return <CustomerBalancesReport />
+        case 'customer-statement':
+          return <CustomerStatementReport />
+        case 'sales-summary':
+          return <SalesSummaryReport />
+        case 'stock-valuation':
+          return <StockValuationReport />
         default:
           return <ReportsPage />
       }

@@ -25,6 +25,9 @@ const CustomerProfilePage = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [filterLoading, setFilterLoading] = useState(false);
 
   useEffect(() => {
     fetchCustomerProfile();
@@ -56,6 +59,92 @@ const CustomerProfilePage = () => {
       console.error('Failed to fetch customer profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch ledger entries with date filter
+  const fetchLedgerEntries = async (filters = {}) => {
+    setFilterLoading(true);
+    try {
+      const response = await apiClient.get(`/customers/${id}`, {
+        params: {
+          from_date: filters.from_date,
+          to_date: filters.to_date
+        }
+      });
+      
+      setLedgerEntries(response.data.data.ledger_entries || []);
+    } catch (error) {
+      console.error('Failed to fetch ledger entries:', error);
+      alert('فشل في تحميل الحركات المالية');
+    } finally {
+      setFilterLoading(false);
+    }
+  };
+
+  // Handle filter button click
+  const handleFilter = () => {
+    if (!fromDate && !toDate) {
+      alert('الرجاء اختيار تاريخ من أو إلى');
+      return;
+    }
+    fetchLedgerEntries({ from_date: fromDate, to_date: toDate });
+  };
+
+  // Handle reset button click
+  const handleReset = () => {
+    setFromDate('');
+    setToDate('');
+    fetchLedgerEntries(); // Reload all entries
+  };
+
+  // Handle PDF export
+  const handleExportPDF = async () => {
+    try {
+      const response = await apiClient.get(`/customers/${id}/statement/pdf`, {
+        params: {
+          from_date: fromDate,
+          to_date: toDate
+        },
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `customer-${id}-statement.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+      alert('فشل في تصدير PDF. تأكد من وجود الـ API في Backend');
+    }
+  };
+
+  // Handle Excel export
+  const handleExportExcel = async () => {
+    try {
+      const response = await apiClient.get(`/customers/${id}/statement/excel`, {
+        params: {
+          from_date: fromDate,
+          to_date: toDate
+        },
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `customer-${id}-statement.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Failed to export Excel:', error);
+      alert('فشل في تصدير Excel. تأكد من وجود الـ API في Backend');
     }
   };
 
@@ -296,6 +385,52 @@ const CustomerProfilePage = () => {
               <Card>
                 <div className="p-6">
                   <h3 className="text-lg font-semibold mb-4">الحركات المالية</h3>
+                  {/* Date Filters & Export Buttons */}
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
+                    <div className="flex gap-2">
+                      <input
+                        type="date"
+                        className="border rounded px-2 py-1 text-sm"
+                        value={fromDate || ''}
+                        onChange={e => setFromDate(e.target.value)}
+                        placeholder="من تاريخ"
+                        aria-label="من تاريخ"
+                        disabled={filterLoading}
+                      />
+                      <input
+                        type="date"
+                        className="border rounded px-2 py-1 text-sm"
+                        value={toDate || ''}
+                        onChange={e => setToDate(e.target.value)}
+                        placeholder="إلى تاريخ"
+                        aria-label="إلى تاريخ"
+                        disabled={filterLoading}
+                      />
+                      <Button 
+                        size="sm" 
+                        onClick={handleFilter}
+                        disabled={filterLoading}
+                      >
+                        {filterLoading ? 'جاري...' : 'فلترة'}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handleReset}
+                        disabled={filterLoading}
+                      >
+                        إعادة
+                      </Button>
+                    </div>
+                    <div className="flex gap-2 md:ml-auto">
+                      <Button size="sm" variant="outline" onClick={handleExportPDF}>
+                        تصدير PDF
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={handleExportExcel}>
+                        تصدير Excel
+                      </Button>
+                    </div>
+                  </div>
                   {ledgerEntries.length > 0 ? (
                     <div className="overflow-x-auto -mx-4 sm:mx-0">
                       <table className="min-w-full divide-y divide-gray-200">

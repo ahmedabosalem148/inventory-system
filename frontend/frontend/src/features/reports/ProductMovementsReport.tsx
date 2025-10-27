@@ -5,16 +5,15 @@
 
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Download, Search, Calendar, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable } from '@/components/ui/data-table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { toast } from 'react-hot-toast'
-import apiClient from '@/services/api/client'
+import apiClient from '@/app/axios'
 import { getProducts } from '@/services/api/products'
-import type { Product } from '@/types'
+import type { Product, ProductClassification, PRODUCT_CLASSIFICATION_LABELS } from '@/types'
 
 interface Movement {
   id: number
@@ -45,12 +44,12 @@ interface MovementData {
 }
 
 export function ProductMovementsReport() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<MovementData | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedProduct, setSelectedProduct] = useState<number | null>(null)
+  const [classificationFilter, setClassificationFilter] = useState<ProductClassification | ''>('')
   const [dateFrom, setDateFrom] = useState(() => {
     const date = new Date()
     date.setMonth(date.getMonth() - 1)
@@ -60,11 +59,15 @@ export function ProductMovementsReport() {
 
   useEffect(() => {
     loadProducts()
-  }, [])
+  }, [classificationFilter])
 
   const loadProducts = async () => {
     try {
-      const response = await getProducts({ per_page: 100 })
+      const params: any = { per_page: 100 }
+      if (classificationFilter) {
+        params.product_classification = classificationFilter
+      }
+      const response = await getProducts(params)
       setProducts(response.data)
     } catch (error) {
       console.error('Error loading products:', error)
@@ -84,7 +87,7 @@ export function ProductMovementsReport() {
         date_from: dateFrom,
         date_to: dateTo,
       }
-      const response = await apiClient.get<{ data: MovementData }>('/reports/inventory/movements', { params })
+      const response = await apiClient.get<{ data: MovementData }>('/reports/product-movement', { params })
       setData(response.data.data)
     } catch (error: any) {
       console.error('Error loading movements:', error)
@@ -185,7 +188,7 @@ export function ProductMovementsReport() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate('/reports')}
+            onClick={() => window.location.hash = '#reports'}
           >
             <ArrowLeft className="w-4 h-4 ml-2" />
             رجوع
@@ -209,6 +212,27 @@ export function ProductMovementsReport() {
       <Card>
         <CardContent className="p-6">
           <div className="space-y-4">
+            {/* Classification Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                تصفية حسب نوع المنتج
+              </label>
+              <select
+                value={classificationFilter}
+                onChange={(e) => setClassificationFilter(e.target.value as ProductClassification | '')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">جميع الأنواع</option>
+                <option value="finished_product">منتج تام</option>
+                <option value="semi_finished">منتج غير تام</option>
+                <option value="parts">أجزاء</option>
+                <option value="plastic_parts">بلاستيك</option>
+                <option value="aluminum_parts">ألومنيوم</option>
+                <option value="raw_material">مواد خام</option>
+                <option value="other">أخرى</option>
+              </select>
+            </div>
+            
             {/* Product Search */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

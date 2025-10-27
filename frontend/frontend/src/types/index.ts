@@ -94,6 +94,25 @@ export interface Branch {
 // Product & Inventory
 // ============================================================================
 
+export type ProductClassification = 
+  | 'finished_product'
+  | 'semi_finished'
+  | 'raw_material'
+  | 'parts'
+  | 'plastic_parts'
+  | 'aluminum_parts'
+  | 'other'
+
+export const PRODUCT_CLASSIFICATION_LABELS: Record<ProductClassification, string> = {
+  finished_product: 'منتج تام',
+  semi_finished: 'منتج غير تام',
+  raw_material: 'مواد خام',
+  parts: 'أجزاء',
+  plastic_parts: 'بلاستيك',
+  aluminum_parts: 'ألومنيوم',
+  other: 'أخرى',
+}
+
 export interface ProductCategory {
   id: number
   name: string
@@ -105,12 +124,17 @@ export interface Product {
   brand?: string
   description?: string
   sku: string
+  product_classification: ProductClassification
   unit: string
-  pack_size: number
+  pack_size: number | null
   min_stock_level: number
+  reorder_level?: number
   price: number
   cost?: number
+  purchase_price?: number
+  sale_price?: number
   category?: ProductCategory | string
+  category_id?: number
   barcode?: string
   image_url?: string
   is_active?: boolean
@@ -125,6 +149,7 @@ export interface ProductFilters {
   search?: string
   brand?: string
   category?: string
+  product_classification?: ProductClassification
   is_active?: boolean
   low_stock?: boolean
   branch_id?: number
@@ -134,15 +159,21 @@ export interface CreateProductInput {
   name: string
   brand?: string
   description?: string
-  sku: string
+  sku?: string
+  product_classification: ProductClassification
+  category_id: number
   unit: string
-  pack_size: number
-  min_stock_level: number
-  price: number
+  pack_size?: number | null
+  min_stock_level?: number
+  min_stock?: number
+  purchase_price: number
+  sale_price: number
+  price?: number
   cost?: number
   category?: string
   barcode?: string
   is_active?: boolean
+  reorder_level?: number
 }
 
 export interface UpdateProductInput extends Partial<CreateProductInput> {
@@ -374,11 +405,13 @@ export interface CreateSalesInvoiceInput {
   customer_id: number
   customer_name?: string // Optional: can be stored if customer is new
   branch_id: number
+  issue_type?: 'SALE' | 'TRANSFER' // Type of issue voucher
+  target_branch_id?: number // Required if issue_type is TRANSFER
+  payment_type?: 'CASH' | 'CREDIT' // Required if issue_type is SALE
   issue_date: string // Backend uses issue_date
   invoice_date?: string // Alias for compatibility
   voucher_type?: string // Optional: type of voucher
-  is_transfer?: boolean // Optional: for branch transfers
-  target_branch_id?: number // Optional: target branch for transfers
+  is_transfer?: boolean // Optional: for branch transfers (deprecated, use issue_type)
   due_date?: string
   discount_type?: 'PERCENTAGE' | 'FIXED' // Backend field
   discount_value?: number // Backend field: can be percentage or fixed amount
@@ -389,6 +422,8 @@ export interface CreateSalesInvoiceInput {
     product_id: number
     quantity: number
     unit_price: number
+    discount_type?: 'PERCENTAGE' | 'FIXED'
+    discount_value?: number
     discount_percentage?: number
     tax_percentage?: number
   }>

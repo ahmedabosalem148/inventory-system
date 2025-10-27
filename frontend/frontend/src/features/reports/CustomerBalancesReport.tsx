@@ -5,13 +5,12 @@
 
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Download, Users, DollarSign, AlertCircle } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable } from '@/components/ui/data-table'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'react-hot-toast'
-import apiClient from '@/services/api/client'
+import apiClient from '@/app/axios'
 
 interface CustomerBalance {
   customer_id: number
@@ -36,7 +35,6 @@ interface BalanceData {
 }
 
 export function CustomerBalancesReport() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<BalanceData | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>('all')
@@ -64,7 +62,7 @@ export function CustomerBalancesReport() {
   }
 
   const handleViewStatement = (customerId: number) => {
-    navigate(`/customers/${customerId}`)
+    window.location.hash = `#customers/${customerId}`
   }
 
   const filteredCustomers = data?.customers.filter(customer => {
@@ -173,7 +171,7 @@ export function CustomerBalancesReport() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate('/reports')}
+            onClick={() => window.location.hash = '#reports'}
           >
             <ArrowLeft className="w-4 h-4 ml-2" />
             رجوع
