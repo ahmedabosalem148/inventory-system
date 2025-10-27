@@ -38,9 +38,10 @@ export const getInvoice = async (id: number): Promise<SalesInvoice> => {
  */
 export const createInvoice = async (
   data: CreateSalesInvoiceInput
-): Promise<SalesInvoice> => {
-  const response = await apiClient.post<ApiResponse<SalesInvoice>>('/issue-vouchers', data)
-  return response.data.data
+): Promise<any> => {
+  const response = await apiClient.post<any>('/issue-vouchers', data)
+  // Return full response data (includes warnings if any)
+  return response.data
 }
 
 /**

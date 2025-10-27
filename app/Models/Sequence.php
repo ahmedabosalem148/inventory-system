@@ -27,6 +27,17 @@ class Sequence extends Model
     ];
 
     /**
+     * Default attributes
+     */
+    protected $attributes = [
+        'prefix' => null,
+        'min_value' => 1,
+        'max_value' => 999999,
+        'increment_by' => 1,
+        'auto_reset' => false,
+    ];
+
+    /**
      * Supported entity types
      */
     public const ENTITY_TYPES = [

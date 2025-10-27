@@ -36,6 +36,7 @@ interface InvoiceLineItem {
 export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
   const [loading, setLoading] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
+  const [warnings, setWarnings] = useState<any[]>([])
 
   // Form data
   const [customerId, setCustomerId] = useState<number>(0)
@@ -299,12 +300,19 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
       if (invoice) {
         await updateInvoice(invoice.id, data)
         toast.success('تم تحديث الفاتورة بنجاح')
+        onClose(true)
       } else {
-        await createInvoice(data)
-        toast.success('تم إنشاء الفاتورة بنجاح')
+        const response = await createInvoice(data)
+        
+        // Check for warnings in response
+        if ((response as any).warnings && (response as any).warnings.length > 0) {
+          setWarnings((response as any).warnings)
+          toast.success('تم إنشاء الفاتورة بنجاح مع تحذيرات', { duration: 5000 })
+        } else {
+          toast.success('تم إنشاء الفاتورة بنجاح')
+          onClose(true)
+        }
       }
-
-      onClose(true)
     } catch (error) {
       console.error('Error saving invoice:', error)
       toast.error('فشل حفظ الفاتورة')
@@ -339,6 +347,53 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
               <p className="text-sm text-blue-600 mt-1">
                 يمكنك تعديل تفاصيل الفاتورة هنا. سيتم حفظ التغييرات مباشرة.
               </p>
+            </div>
+          )}
+
+          {/* Pack Size Warnings */}
+          {warnings.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-yellow-800 mb-2">
+                    تحذيرات حجم العبوة
+                  </h3>
+                  <div className="space-y-2">
+                    {warnings.map((warning, index) => (
+                      <div key={index} className="text-sm text-yellow-700 bg-yellow-100 rounded px-3 py-2">
+                        <p className="font-medium">{warning.message}</p>
+                        {warning.product_name && (
+                          <p className="text-xs mt-1">
+                            المنتج: {warning.product_name} | الكمية: {warning.quantity} | حجم العبوة: {warning.pack_size}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      onClick={() => setWarnings([])}
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                    >
+                      إخفاء التحذيرات
+                    </Button>
+                    <Button
+                      onClick={() => onClose(true)}
+                      size="sm"
+                      className="text-xs bg-yellow-600 hover:bg-yellow-700"
+                    >
+                      إغلاق وإكمال
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           

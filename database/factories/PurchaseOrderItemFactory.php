@@ -25,7 +25,7 @@ class PurchaseOrderItemFactory extends Factory
             'quantity_ordered' => $quantityOrdered,
             'quantity_received' => 0,
             'unit_price' => $unitPrice,
-            'discount_type' => 'fixed',
+            'discount_type' => 'FIXED',
             'discount_value' => $discountAmount,
             'discount_amount' => $discountAmount,
             'subtotal' => $subtotal,

@@ -118,6 +118,26 @@ class ProductController extends Controller
             foreach ($branches as $branch) {
                 // التحقق من صلاحية المستخدم على كل مخزن
                 if (!$user->hasRole('super-admin') && !$user->hasFullAccessToBranch($branch->id)) {
+                    // للمستخدمين غير super-admin، يجب أن يكون للفرع صلاحية full_access
+                    // وإلا نتحقق من initial_stock - إن كان يحاول إضافة مخزون لفرع غير مصرح له
+                    $hasInitialStockForBranch = false;
+                    if ($request->filled('initial_stock')) {
+                        foreach ($request->initial_stock as $stock) {
+                            if ($stock['branch_id'] == $branch->id && $stock['quantity'] > 0) {
+                                $hasInitialStockForBranch = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // إذا حاول إضافة مخزون لفرع غير مصرح له، نرفض الطلب
+                    if ($hasInitialStockForBranch) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => 'ليس لديك صلاحية لإضافة مخزون في الفرع: ' . $branch->name,
+                        ], 403);
+                    }
+                    
                     continue; // تجاهل الفروع التي لا يملك المستخدم صلاحية عليها
                 }
 

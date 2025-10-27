@@ -27,16 +27,16 @@ class PurchaseOrderFactory extends Factory
             'expected_delivery_date' => $this->faker->dateTimeBetween('now', '+30 days'),
             'actual_delivery_date' => null,
             'subtotal' => $subtotal,
-            'discount_type' => 'fixed',
+            'discount_type' => 'FIXED',
             'discount_value' => $discountAmount,
             'discount_amount' => $discountAmount,
             'tax_percentage' => 15,
             'tax_amount' => $taxAmount,
             'shipping_cost' => 0,
             'total_amount' => $totalAmount,
-            'status' => 'draft',
-            'receiving_status' => 'pending',
-            'payment_status' => 'unpaid',
+            'status' => 'DRAFT',
+            'receiving_status' => 'NOT_RECEIVED',
+            'payment_status' => 'UNPAID',
             'notes' => $this->faker->optional()->sentence(),
             'cancellation_reason' => null,
             'created_by' => User::factory(),
@@ -48,7 +48,7 @@ class PurchaseOrderFactory extends Factory
     public function approved(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'approved',
+            'status' => 'APPROVED',
             'approved_at' => now(),
             'approved_by' => User::factory(),
         ]);

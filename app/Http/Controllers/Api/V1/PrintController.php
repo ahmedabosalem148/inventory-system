@@ -364,7 +364,7 @@ class PrintController extends Controller
             return response()->json([
                 'message' => 'تم إعداد الطباعة بنجاح',
                 'count' => $documents->count(),
-                'download_url' => route('api.print.bulk.download', ['type' => $documentType, 'ids' => implode(',', $ids)])
+                'download_url' => null // TODO: Implement bulk download endpoint
             ]);
 
         } catch (\Exception $e) {

@@ -15,6 +15,8 @@ class ReturnVoucherFactory extends Factory
     public function definition(): array
     {
         $totalAmount = $this->faker->randomFloat(2, 100, 1000);
+        
+        $reasonCategories = ['damaged', 'defective', 'customer_request', 'wrong_item', 'other'];
 
         return [
             'voucher_number' => $this->faker->unique()->numerify('RET-####'),
@@ -23,6 +25,8 @@ class ReturnVoucherFactory extends Factory
             'branch_id' => Branch::factory(),
             'return_date' => $this->faker->date(),
             'total_amount' => $totalAmount,
+            'reason' => $this->faker->sentence(),
+            'reason_category' => $this->faker->randomElement($reasonCategories),
             'status' => 'PENDING',
             'notes' => $this->faker->optional()->sentence(),
             'created_by' => User::factory(),

@@ -35,6 +35,7 @@ class PurchaseOrder extends Model
         'approved_at',
         'print_count',
         'last_printed_at',
+        'last_printed_by',
     ];
 
     protected $casts = [
@@ -42,6 +43,7 @@ class PurchaseOrder extends Model
         'expected_delivery_date' => 'date',
         'actual_delivery_date' => 'date',
         'approved_at' => 'datetime',
+        'last_printed_at' => 'datetime',
         'subtotal' => 'decimal:2',
         'discount_value' => 'decimal:2',
         'discount_amount' => 'decimal:2',

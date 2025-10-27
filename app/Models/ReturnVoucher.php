@@ -31,6 +31,7 @@ class ReturnVoucher extends Model
         'created_by',
         'print_count',
         'last_printed_at',
+        'last_printed_by',
     ];
 
     protected $casts = [
@@ -40,6 +41,7 @@ class ReturnVoucher extends Model
         'net_total' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'approved_at' => 'datetime',
+        'last_printed_at' => 'datetime',
     ];
 
     /**

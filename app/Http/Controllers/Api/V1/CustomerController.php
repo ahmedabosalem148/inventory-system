@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreCustomerRequest;
+use App\Http\Requests\UpdateCustomerRequest;
 use App\Http\Resources\Api\V1\CustomerResource;
 use App\Models\Customer;
 use App\Services\CustomerLedgerService;
@@ -84,23 +86,9 @@ class CustomerController extends Controller
      * 
      * POST /api/v1/customers
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreCustomerRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:200',
-            'type' => 'nullable|string|in:retail,wholesale',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:500',
-            'tax_id' => 'nullable|string|max:50',
-            'credit_limit' => 'nullable|numeric|min:0',
-            'is_active' => 'boolean',
-            'notes' => 'nullable|string',
-        ], [
-            'name.required' => 'اسم العميل مطلوب',
-            'name.max' => 'اسم العميل طويل جداً',
-            'type.in' => 'نوع العميل غير صحيح',
-            'credit_limit.min' => 'حد الائتمان يجب أن يكون رقم موجب',
-        ]);
+        $validated = $request->validated();
 
         try {
             // Generate unique code
@@ -153,22 +141,9 @@ class CustomerController extends Controller
      * 
      * PUT/PATCH /api/v1/customers/{id}
      */
-    public function update(Request $request, Customer $customer): JsonResponse
+    public function update(UpdateCustomerRequest $request, Customer $customer): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:200',
-            'type' => 'nullable|string|in:retail,wholesale',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:500',
-            'tax_id' => 'nullable|string|max:50',
-            'credit_limit' => 'nullable|numeric|min:0',
-            'is_active' => 'sometimes|boolean',
-            'notes' => 'nullable|string',
-        ], [
-            'name.max' => 'اسم العميل طويل جداً',
-            'type.in' => 'نوع العميل غير صحيح',
-            'credit_limit.min' => 'حد الائتمان يجب أن يكون رقم موجب',
-        ]);
+        $validated = $request->validated();
 
         try {
             $customer->update($validated);

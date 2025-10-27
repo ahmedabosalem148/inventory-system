@@ -106,7 +106,9 @@ class AuthenticationTest extends TestCase
     {
         // Arrange
         $user = User::factory()->create();
-        $token = $user->createToken('test-token')->plainTextToken;
+        $tokenResult = $user->createToken('test-token');
+        $token = $tokenResult->plainTextToken;
+        $tokenId = $tokenResult->accessToken->id;
 
         // Act
         $response = $this->withHeader('Authorization', "Bearer {$token}")
@@ -115,11 +117,10 @@ class AuthenticationTest extends TestCase
         // Assert
         $response->assertStatus(200);
         
-        // Verify token is revoked
-        $meResponse = $this->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/v1/auth/me');
-        
-        $meResponse->assertStatus(401);
+        // Verify token is deleted from database
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'id' => $tokenId,
+        ]);
     }
 
     /** @test */

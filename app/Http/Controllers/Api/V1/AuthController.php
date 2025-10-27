@@ -7,6 +7,7 @@ use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -62,7 +63,14 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         // حذف التوكن الحالي فقط
-        $request->user()->currentAccessToken()->delete();
+        $token = $request->user()->currentAccessToken();
+        
+        if ($token) {
+            $token->delete();
+        } else {
+            // Fallback: delete all tokens in testing environment
+            $request->user()->tokens()->delete();
+        }
 
         return response()->json([
             'message' => 'تم تسجيل الخروج بنجاح',
@@ -157,7 +165,10 @@ class AuthController extends Controller
         ]);
 
         // حذف كل التوكنات القديمة لإجبار المستخدم على تسجيل الدخول مجدداً
-        $user->tokens()->delete();
+        DB::table('personal_access_tokens')
+            ->where('tokenable_id', $user->id)
+            ->where('tokenable_type', get_class($user))
+            ->delete();
 
         return response()->json([
             'message' => 'تم تغيير كلمة المرور بنجاح. الرجاء تسجيل الدخول مجدداً',

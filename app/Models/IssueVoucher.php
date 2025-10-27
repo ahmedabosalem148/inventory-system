@@ -30,6 +30,7 @@ class IssueVoucher extends Model
         'created_by',
         'print_count',
         'last_printed_at',
+        'last_printed_by',
     ];
 
     protected $casts = [
@@ -41,6 +42,7 @@ class IssueVoucher extends Model
         'subtotal' => 'decimal:2',
         'net_total' => 'decimal:2',
         'approved_at' => 'datetime',
+        'last_printed_at' => 'datetime',
     ];
 
     /**

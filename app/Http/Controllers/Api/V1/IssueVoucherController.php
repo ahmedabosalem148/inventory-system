@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateIssueVoucherRequest;
 use App\Http\Resources\Api\V1\IssueVoucherResource;
 use App\Models\IssueVoucher;
 use App\Models\Product;
+use App\Rules\CustomerCreditLimitCheck;
 use App\Rules\MaxDiscountValue;
 use App\Rules\SufficientStock;
 use App\Services\InventoryService;
@@ -233,15 +235,35 @@ class IssueVoucherController extends Controller
                 ], 403);
             }
         }
+        
+        // حساب الإجماليات
+        $calculations = $this->calculateVoucherTotals($validated);
+        
+        // Check customer credit limit for CREDIT sales
+        if (isset($validated['payment_type']) && $validated['payment_type'] === 'CREDIT' && isset($validated['customer_id'])) {
+            $creditCheckRule = new CustomerCreditLimitCheck(
+                customerId: $validated['customer_id'],
+                newAmount: $calculations['net_total'],
+                blockIfExceeded: false // Warning only, don't block
+            );
+            
+            // Run the validation to add warnings to session
+            $creditCheckRule->validate('customer_id', $validated['customer_id'], function ($message) {
+                // This closure won't be called unless we want to block
+            });
+            
+            // Get warnings from session
+            $creditWarnings = session()->pull('validation.warnings', []);
+            if (!empty($creditWarnings)) {
+                $warnings = array_merge($warnings, $creditWarnings);
+            }
+        }
 
         try {
             DB::beginTransaction();
 
             // توليد رقم الإذن
             $voucherNumber = $this->sequencerService->getNextSequence('issue_vouchers');
-
-            // حساب الإجماليات
-            $calculations = $this->calculateVoucherTotals($validated);
 
             // إنشاء الإذن
             $voucher = IssueVoucher::create([
@@ -375,6 +397,13 @@ class IssueVoucherController extends Controller
 
         // Set paper size and orientation
         $pdf->setPaper('a4', 'portrait');
+        
+        // Update print tracking
+        $issueVoucher->increment('print_count');
+        $issueVoucher->update([
+            'last_printed_at' => now(),
+            'last_printed_by' => $user->id
+        ]);
 
         // Return PDF as download or inline view
         $filename = 'issue-voucher-' . $issueVoucher->voucher_number . '.pdf';
@@ -388,12 +417,17 @@ class IssueVoucherController extends Controller
 
     /**
      * Update the specified resource in storage.
+     * Note: Currently disabled. If needed in future, use UpdateIssueVoucherRequest.
      */
-    public function update(Request $request, string $id)
+    public function update(UpdateIssueVoucherRequest $request, string $id)
     {
         return response()->json([
             'message' => 'لا يمكن تعديل أذونات الصرف، يمكن الإلغاء وإنشاء إذن جديد',
         ], 422);
+        
+        // Future implementation would use $request->validated()
+        // $validated = $request->validated();
+        // ... update logic with warnings similar to store method
     }
 
     /**

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreReturnVoucherRequest;
+use App\Http\Requests\UpdateReturnVoucherRequest;
 use App\Http\Resources\Api\V1\ReturnVoucherResource;
 use App\Models\ReturnVoucher;
 use App\Services\InventoryService;
@@ -82,23 +84,10 @@ class ReturnVoucherController extends Controller
     /**
      * إنشاء إذن مرتجع جديد
      */
-    public function store(Request $request)
+    public function store(StoreReturnVoucherRequest $request)
     {
         $user = $request->user();
-
-        $validated = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
-            'customer_name' => 'required_without:customer_id|string|max:100',
-            'branch_id' => 'required|exists:branches,id',
-            'return_date' => 'required|date',
-            'notes' => 'nullable|string',
-            'reason' => 'required|string|max:500',
-            'reason_category' => 'nullable|in:damaged,defective,customer_request,wrong_item,other',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.unit_price' => 'required|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         // Check permissions: regular users need full_access on the branch
         if (!$user->hasRole(['super-admin', 'manager'])) {
@@ -127,10 +116,12 @@ class ReturnVoucherController extends Controller
             $voucher = ReturnVoucher::create([
                 'voucher_number' => $voucherNumber,
                 'customer_id' => $validated['customer_id'] ?? null,
-                'customer_name' => $validated['customer_name'],
+                'customer_name' => $validated['customer_name'] ?? null,
                 'branch_id' => $validated['branch_id'],
                 'return_date' => $validated['return_date'],
                 'total_amount' => $totalAmount,
+                'reason' => $validated['reason'],
+                'reason_category' => $validated['reason_category'] ?? null,
                 'notes' => $validated['notes'] ?? null,
                 'status' => 'completed',
                 'created_by' => auth()->id(),
@@ -226,6 +217,13 @@ class ReturnVoucherController extends Controller
         $pdf = Pdf::loadView('pdf.return-voucher', [
             'voucher' => $returnVoucher
         ]);
+        
+        // Update print tracking
+        $returnVoucher->increment('print_count');
+        $returnVoucher->update([
+            'last_printed_at' => now(),
+            'last_printed_by' => $user->id
+        ]);
 
         return $pdf->download("return-voucher-{$returnVoucher->voucher_number}.pdf");
     }
@@ -233,11 +231,19 @@ class ReturnVoucherController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    /**
+     * Update the specified resource in storage.
+     * Note: Currently disabled. If needed in future, use UpdateReturnVoucherRequest.
+     */
+    public function update(UpdateReturnVoucherRequest $request, string $id)
     {
         return response()->json([
             'message' => 'لا يمكن تعديل أذونات المرتجع، يمكن الإلغاء وإنشاء إذن جديد',
         ], 422);
+        
+        // Future implementation would use $request->validated()
+        // $validated = $request->validated();
+        // ... update logic
     }
 
     /**

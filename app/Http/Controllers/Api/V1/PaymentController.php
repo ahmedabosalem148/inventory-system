@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StorePaymentRequest;
 use App\Http\Resources\Api\V1\PaymentResource;
 use App\Models\Payment;
 use App\Models\Cheque;
@@ -58,48 +59,12 @@ class PaymentController extends Controller
     /**
      * تسجيل دفعة جديدة
      */
-    public function store(Request $request)
+    public function store(StorePaymentRequest $request)
     {
-        $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'payment_date' => 'required|date',
-            'amount' => 'required|numeric|min:0.01',
-            'payment_method' => ['required', Rule::in(['cash', 'cheque', 'bank_transfer'])],
-            'notes' => 'nullable|string',
-            
-            // حقول الشيك (إذا كانت الطريقة شيك)
-            'cheque_number' => 'required_if:payment_method,cheque|string',
-            'cheque_date' => [
-                'required_if:payment_method,cheque',
-                'date',
-                'after_or_equal:' . now()->subYears(2)->format('Y-m-d')
-            ],
-            'cheque_due_date' => [
-                'required_if:payment_method,cheque',
-                'date',
-                'after_or_equal:cheque_date'
-            ],
-            'bank_name' => 'required_if:payment_method,cheque|string',
-        ]);
+        $validated = $request->validated();
         
-        // Additional validation for cheque
-        if ($validated['payment_method'] === 'cheque') {
-            $validator = validator($validated, [
-                'cheque_number' => [
-                    'required',
-                    new UniqueChequeNumber(
-                        bankName: $validated['bank_name']
-                    )
-                ]
-            ]);
-            
-            if ($validator->fails()) {
-                return response()->json([
-                    'message' => 'خطأ في التحقق من بيانات الشيك',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-        }
+        // Get warnings from the form request
+        $warnings = $request->getWarnings();
 
         try {
             DB::beginTransaction();
@@ -143,7 +108,16 @@ class PaymentController extends Controller
 
             DB::commit();
 
-            return new PaymentResource($payment->load(['customer', 'cheque']));
+            $response = [
+                'data' => new PaymentResource($payment->load(['customer', 'cheque']))
+            ];
+            
+            // Add warnings if any
+            if (!empty($warnings)) {
+                $response['warnings'] = $warnings;
+            }
+            
+            return response()->json($response, 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
