@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StorePurchaseOrderRequest;
+use App\Http\Requests\UpdatePurchaseOrderRequest;
 use App\Models\PurchaseOrder;
 use App\Services\InventoryService;
 use App\Services\SequencerService;
@@ -78,25 +80,9 @@ class PurchaseOrderController extends Controller
     /**
      * إنشاء أمر شراء جديد
      */
-    public function store(Request $request)
+    public function store(StorePurchaseOrderRequest $request)
     {
-        $validated = $request->validate([
-            'supplier_id' => 'required|exists:suppliers,id',
-            'branch_id' => 'required|exists:branches,id',
-            'order_date' => 'required|date',
-            'expected_delivery_date' => 'nullable|date|after:order_date',
-            'discount_type' => ['nullable', Rule::in(['NONE', 'PERCENTAGE', 'FIXED'])],
-            'discount_value' => 'nullable|numeric|min:0',
-            'tax_percentage' => 'nullable|numeric|min:0|max:100',
-            'shipping_cost' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity_ordered' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.discount_type' => ['nullable', Rule::in(['NONE', 'PERCENTAGE', 'FIXED'])],
-            'items.*.discount_value' => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::beginTransaction();
@@ -165,9 +151,9 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * تحديث أمر الشراء
+     * تحديث أمر شراء
      */
-    public function update(Request $request, PurchaseOrder $purchaseOrder)
+    public function update(UpdatePurchaseOrderRequest $request, PurchaseOrder $purchaseOrder)
     {
         if (!$purchaseOrder->isEditable()) {
             return response()->json([
@@ -175,19 +161,7 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
 
-        $validated = $request->validate([
-            'supplier_id' => 'sometimes|required|exists:suppliers,id',
-            'expected_delivery_date' => 'nullable|date',
-            'discount_type' => ['nullable', Rule::in(['NONE', 'PERCENTAGE', 'FIXED'])],
-            'discount_value' => 'nullable|numeric|min:0',
-            'tax_percentage' => 'nullable|numeric|min:0|max:100',
-            'shipping_cost' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
-            'items' => 'sometimes|required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity_ordered' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::beginTransaction();

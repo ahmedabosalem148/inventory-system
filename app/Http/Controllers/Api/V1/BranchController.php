@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreBranchRequest;
+use App\Http\Requests\UpdateBranchRequest;
 use App\Http\Resources\Api\V1\BranchResource;
 use App\Models\Branch;
 use Illuminate\Http\JsonResponse;
@@ -46,20 +48,9 @@ class BranchController extends Controller
      * 
      * POST /api/v1/branches
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreBranchRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'code' => 'required|string|max:10|unique:branches,code',
-            'name' => 'required|string|max:100|unique:branches,name',
-            'location' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'is_active' => 'boolean',
-        ], [
-            'code.required' => 'كود الفرع مطلوب',
-            'code.unique' => 'كود الفرع موجود بالفعل',
-            'name.required' => 'اسم الفرع مطلوب',
-            'name.unique' => 'اسم الفرع موجود بالفعل',
-        ]);
+        $validated = $request->validated();
 
         try {
             $branch = Branch::create($validated);
@@ -97,18 +88,9 @@ class BranchController extends Controller
      * 
      * PUT/PATCH /api/v1/branches/{id}
      */
-    public function update(Request $request, Branch $branch): JsonResponse
+    public function update(UpdateBranchRequest $request, Branch $branch): JsonResponse
     {
-        $validated = $request->validate([
-            'code' => 'sometimes|string|max:10|unique:branches,code,' . $branch->id,
-            'name' => 'sometimes|string|max:100|unique:branches,name,' . $branch->id,
-            'location' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'is_active' => 'sometimes|boolean',
-        ], [
-            'code.unique' => 'كود الفرع موجود بالفعل',
-            'name.unique' => 'اسم الفرع موجود بالفعل',
-        ]);
+        $validated = $request->validated();
 
         try {
             $branch->update($validated);

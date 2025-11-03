@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Rules\MaxDiscountValue;
 use App\Rules\SufficientStock;
+use App\Rules\ValidStatusTransition;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateIssueVoucherRequest extends FormRequest
@@ -65,6 +66,17 @@ class UpdateIssueVoucherRequest extends FormRequest
             ],
             'total_amount' => ['sometimes', 'numeric', 'min:0'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:500'],
+            
+            // Status field with transition validation
+            'status' => [
+                'sometimes',
+                'string',
+                'in:PENDING,APPROVED,COMPLETED,CANCELLED',
+                new ValidStatusTransition(
+                    $this->route('issueVoucher')?->status,
+                    'إذن صرف'
+                )
+            ],
             
             // Items array
             'items' => ['sometimes', 'array', 'min:1'],

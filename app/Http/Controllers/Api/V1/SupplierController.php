@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreSupplierRequest;
+use App\Http\Requests\UpdateSupplierRequest;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -55,20 +57,9 @@ class SupplierController extends Controller
     /**
      * إنشاء مورد جديد
      */
-    public function store(Request $request)
+    public function store(StoreSupplierRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'contact_name' => 'nullable|string|max:100',
-            'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:100',
-            'address' => 'nullable|string',
-            'tax_number' => 'nullable|string|max:50',
-            'payment_terms' => ['nullable', Rule::in(['CASH', 'NET_7', 'NET_15', 'NET_30', 'NET_60'])],
-            'credit_limit' => 'nullable|numeric|min:0',
-            'status' => ['nullable', Rule::in(['ACTIVE', 'INACTIVE'])],
-            'notes' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $supplier = Supplier::create($validated);
 
@@ -81,20 +72,9 @@ class SupplierController extends Controller
     /**
      * تحديث بيانات المورد
      */
-    public function update(Request $request, Supplier $supplier)
+    public function update(UpdateSupplierRequest $request, Supplier $supplier)
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:100',
-            'contact_name' => 'nullable|string|max:100',
-            'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:100',
-            'address' => 'nullable|string',
-            'tax_number' => 'nullable|string|max:50',
-            'payment_terms' => ['nullable', Rule::in(['CASH', 'NET_7', 'NET_15', 'NET_30', 'NET_60'])],
-            'credit_limit' => 'nullable|numeric|min:0',
-            'status' => ['nullable', Rule::in(['ACTIVE', 'INACTIVE'])],
-            'notes' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $supplier->update($validated);
 

@@ -41,7 +41,7 @@ class UpdateCustomerRequest extends FormRequest
                 'sometimes',
                 'string',
                 'max:20',
-                'regex:/^(\+?[0-9]{1,4})?[0-9]{7,15}$/' // International phone format
+                'regex:/^(\+2)?01[0-2,5]{1}[0-9]{8}$/' // Egyptian phone format
             ],
             'email' => [
                 'sometimes',
@@ -53,16 +53,6 @@ class UpdateCustomerRequest extends FormRequest
             'address' => ['sometimes', 'nullable', 'string', 'max:500'],
             'city' => ['sometimes', 'nullable', 'string', 'max:100'],
             'country' => ['sometimes', 'nullable', 'string', 'max:100'],
-            
-            // Tax Information (required for companies)
-            'tax_id' => [
-                'required_if:customer_type,COMPANY',
-                'nullable',
-                'string',
-                'max:50',
-                Rule::unique('customers', 'tax_id')->ignore($customerId)
-            ],
-            'tax_percentage' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100'],
             
             // Credit Information
             'credit_limit' => ['sometimes', 'nullable', 'numeric', 'min:0'],
@@ -92,7 +82,7 @@ class UpdateCustomerRequest extends FormRequest
             
             'customer_type.in' => 'نوع العميل يجب أن يكون فرد أو شركة',
             
-            'phone.regex' => 'رقم الهاتف غير صالح. يجب أن يحتوي على 7-15 رقم مع رمز الدولة الاختياري',
+            'phone.regex' => 'صيغة رقم الهاتف غير صحيحة (مثال: 01012345678 أو +201012345678)',
             'phone.max' => 'رقم الهاتف لا يمكن أن يتجاوز 20 حرفاً',
             
             'email.email' => 'البريد الإلكتروني غير صالح',
@@ -102,14 +92,6 @@ class UpdateCustomerRequest extends FormRequest
             'address.max' => 'العنوان لا يمكن أن يتجاوز 500 حرف',
             'city.max' => 'المدينة لا يمكن أن تتجاوز 100 حرف',
             'country.max' => 'الدولة لا يمكن أن تتجاوز 100 حرف',
-            
-            'tax_id.required_if' => 'الرقم الضريبي مطلوب للشركات',
-            'tax_id.unique' => 'الرقم الضريبي مستخدم بالفعل',
-            'tax_id.max' => 'الرقم الضريبي لا يمكن أن يتجاوز 50 حرفاً',
-            
-            'tax_percentage.numeric' => 'نسبة الضريبة يجب أن تكون رقماً',
-            'tax_percentage.min' => 'نسبة الضريبة لا يمكن أن تكون سالبة',
-            'tax_percentage.max' => 'نسبة الضريبة لا يمكن أن تتجاوز 100%',
             
             'credit_limit.numeric' => 'حد الائتمان يجب أن يكون رقماً',
             'credit_limit.min' => 'حد الائتمان لا يمكن أن يكون سالباً',
@@ -141,8 +123,6 @@ class UpdateCustomerRequest extends FormRequest
             'address' => 'العنوان',
             'city' => 'المدينة',
             'country' => 'الدولة',
-            'tax_id' => 'الرقم الضريبي',
-            'tax_percentage' => 'نسبة الضريبة',
             'credit_limit' => 'حد الائتمان',
             'payment_terms_days' => 'مدة الدفع',
             'branches' => 'الفروع',

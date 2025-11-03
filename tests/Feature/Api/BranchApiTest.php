@@ -5,15 +5,25 @@ namespace Tests\Feature\Api;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class BranchApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function authenticatedUser()
+    protected function authenticatedUser($isSuperAdmin = false)
     {
         $user = User::factory()->create();
+        
+        if ($isSuperAdmin) {
+            // Create super-admin role if not exists
+            if (!Role::where('name', 'super-admin')->exists()) {
+                Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
+            }
+            $user->assignRole('super-admin');
+        }
+        
         $token = $user->createToken('test-token')->plainTextToken;
         return ['user' => $user, 'token' => $token];
     }
@@ -38,7 +48,7 @@ class BranchApiTest extends TestCase
     public function it_can_create_a_branch()
     {
         // Arrange
-        $auth = $this->authenticatedUser();
+        $auth = $this->authenticatedUser(true); // super-admin required
         $branchData = [
             'code' => 'TST',
             'name' => 'فرع تجريبي',
@@ -66,7 +76,7 @@ class BranchApiTest extends TestCase
     {
         // Arrange
         Branch::factory()->create(['code' => 'DUP']);
-        $auth = $this->authenticatedUser();
+        $auth = $this->authenticatedUser(true); // super-admin required
 
         // Act
         $response = $this->withHeader('Authorization', "Bearer {$auth['token']}")
@@ -101,7 +111,7 @@ class BranchApiTest extends TestCase
     {
         // Arrange
         $branch = Branch::factory()->create(['name' => 'اسم قديم']);
-        $auth = $this->authenticatedUser();
+        $auth = $this->authenticatedUser(true); // super-admin required
 
         // Act
         $response = $this->withHeader('Authorization', "Bearer {$auth['token']}")

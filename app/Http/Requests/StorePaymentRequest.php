@@ -162,6 +162,7 @@ class StorePaymentRequest extends FormRequest
     {
         $warnings = [];
         
+        // Warning for post-dated cheques (more than 6 months)
         if ($this->input('payment_method') === 'CHEQUE' && $this->input('cheque_date')) {
             $chequeDate = strtotime($this->input('cheque_date'));
             $sixMonthsFromNow = strtotime('+6 months');
@@ -171,6 +172,26 @@ class StorePaymentRequest extends FormRequest
                     'field' => 'cheque_date',
                     'message' => 'تحذير: الشيك مؤجل لأكثر من 6 أشهر'
                 ];
+            }
+        }
+        
+        // Warning when payment exceeds customer balance
+        if ($this->input('customer_id') && $this->input('amount')) {
+            $customer = \App\Models\Customer::find($this->input('customer_id'));
+            
+            if ($customer && $customer->balance > 0) {
+                $paymentAmount = floatval($this->input('amount'));
+                
+                if ($paymentAmount > $customer->balance) {
+                    $warnings[] = [
+                        'field' => 'amount',
+                        'message' => sprintf(
+                            'تحذير: المبلغ المدفوع (%.2f) أكبر من رصيد العميل الحالي (%.2f)',
+                            $paymentAmount,
+                            $customer->balance
+                        )
+                    ];
+                }
             }
         }
         

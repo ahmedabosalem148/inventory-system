@@ -186,9 +186,18 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create([
             'password' => bcrypt('old-password'),
         ]);
-        $oldToken = $user->createToken('old-token')->plainTextToken;
+        
+        // Create token before password change
+        $oldTokenResult = $user->createToken('old-token');
+        $oldToken = $oldTokenResult->plainTextToken;
+        $oldTokenId = $oldTokenResult->accessToken->id;
 
-        // Act
+        // Verify old token works before password change
+        $beforeResponse = $this->withHeader('Authorization', "Bearer {$oldToken}")
+            ->getJson('/api/v1/auth/me');
+        $beforeResponse->assertStatus(200);
+
+        // Act - Change password (this should delete all tokens)
         $response = $this->withHeader('Authorization', "Bearer {$oldToken}")
             ->postJson('/api/v1/auth/change-password', [
                 'current_password' => 'old-password',
@@ -196,13 +205,19 @@ class AuthenticationTest extends TestCase
                 'new_password_confirmation' => 'new-password',
             ]);
 
-        // Assert
-        $response->assertStatus(200);
+        // Assert password change succeeded
+        $response->assertStatus(200)
+            ->assertJson(['message' => 'تم تغيير كلمة المرور بنجاح. الرجاء تسجيل الدخول مجدداً']);
         
-        // Verify old token no longer works
-        $meResponse = $this->withHeader('Authorization', "Bearer {$oldToken}")
-            ->getJson('/api/v1/auth/me');
+        // Verify token is actually deleted from database
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'id' => $oldTokenId,
+        ]);
         
-        $meResponse->assertStatus(401);
+        // Verify no tokens exist for this user
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'tokenable_id' => $user->id,
+            'tokenable_type' => get_class($user),
+        ]);
     }
 }
