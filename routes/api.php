@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\InventoryCountController;
 use App\Http\Controllers\Api\V1\InventoryMovementController;
 use App\Http\Controllers\Api\V1\IssueVoucherController;
 use App\Http\Controllers\Api\V1\PaymentController;
@@ -146,6 +147,17 @@ Route::prefix('v1')
         ->name('api.issue-vouchers.stats');
     Route::get('return-vouchers/{returnVoucher}/print', [ReturnVoucherController::class, 'print'])
         ->name('api.return-vouchers.print');
+
+    // ========================================================================
+    // Inventory Counting
+    // ========================================================================
+    Route::apiResource('inventory-counts', InventoryCountController::class)->names('api.inventory-counts');
+    Route::post('inventory-counts/{inventoryCount}/submit', [InventoryCountController::class, 'submit'])
+        ->name('api.inventory-counts.submit');
+    Route::post('inventory-counts/{inventoryCount}/approve', [InventoryCountController::class, 'approve'])
+        ->name('api.inventory-counts.approve');
+    Route::post('inventory-counts/{inventoryCount}/reject', [InventoryCountController::class, 'reject'])
+        ->name('api.inventory-counts.reject');
 
     // ========================================================================
     // Payments & Cheques

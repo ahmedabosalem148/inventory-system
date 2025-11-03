@@ -22,6 +22,8 @@ class ProductController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', Product::class);
+
         $query = Product::with(['category']);
 
         // البحث بالاسم
@@ -63,23 +65,10 @@ class ProductController extends Controller
      * حفظ منتج جديد
      * 
      * POST /api/v1/products
-     * 
-     * Note: يحتاج full_access على المخزن
      */
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $user = $request->user();
-        
-        // التحقق من الصلاحيات
-        if (!$user->hasRole('super-admin')) {
-            $activeBranch = $user->getActiveBranch();
-            
-            if (!$activeBranch || !$user->hasFullAccessToBranch($activeBranch->id)) {
-                return response()->json([
-                    'message' => 'ليس لديك صلاحية كاملة لإضافة منتجات في هذا الفرع',
-                ], 403);
-            }
-        }
+        $this->authorize('create', Product::class);
 
         $validated = $request->validated();
 
@@ -177,14 +166,14 @@ class ProductController extends Controller
         }
     }
 
-    /**
-     * عرض تفاصيل منتج واحد
+        /**
+     * عرض منتج واحد مع رصيد الفروع
      * 
      * GET /api/v1/products/{id}
      */
     public function show(Product $product): JsonResponse
     {
-        $product->load(['category', 'branchStocks.branch']);
+        $this->authorize('view', $product);
         
         return response()->json([
             'data' => ProductResource::make($product),
@@ -195,23 +184,10 @@ class ProductController extends Controller
      * تحديث بيانات منتج
      * 
      * PUT/PATCH /api/v1/products/{id}
-     * 
-     * Note: يحتاج full_access
      */
     public function update(UpdateProductRequest $request, Product $product): JsonResponse
     {
-        $user = $request->user();
-        
-        // التحقق من الصلاحيات
-        if (!$user->hasRole('super-admin')) {
-            $activeBranch = $user->getActiveBranch();
-            
-            if (!$activeBranch || !$user->hasFullAccessToBranch($activeBranch->id)) {
-                return response()->json([
-                    'message' => 'ليس لديك صلاحية تعديل المنتجات',
-                ], 403);
-            }
-        }
+        $this->authorize('update', $product);
 
         $validated = $request->validated();
 
@@ -244,19 +220,10 @@ class ProductController extends Controller
      * حذف منتج
      * 
      * DELETE /api/v1/products/{id}
-     * 
-     * Note: يحتاج full_access + Admin فقط
      */
     public function destroy(Request $request, Product $product): JsonResponse
     {
-        $user = $request->user();
-        
-        // فقط Admin يقدر يحذف منتجات
-        if (!$user->hasRole('super-admin')) {
-            return response()->json([
-                'message' => 'فقط المدير يمكنه حذف المنتجات',
-            ], 403);
-        }
+        $this->authorize('delete', $product);
 
         try {
             // التحقق من وجود رصيد

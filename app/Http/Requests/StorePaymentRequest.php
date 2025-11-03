@@ -28,7 +28,7 @@ class StorePaymentRequest extends FormRequest
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'payment_method' => ['required', 'in:CASH,CHEQUE,BANK_TRANSFER,CREDIT_CARD'],
+            'payment_method' => ['required', 'in:CASH,CHEQUE,VODAFONE_CASH,INSTAPAY,BANK_ACCOUNT'],
             'notes' => ['nullable', 'string', 'max:500'],
             
             // Cheque fields (required if payment_method is CHEQUE)
@@ -82,9 +82,49 @@ class StorePaymentRequest extends FormRequest
                 'in:PENDING,CLEARED,BOUNCED,CANCELLED'
             ],
             
-            // Bank transfer fields (required if payment_method is BANK_TRANSFER)
-            'transaction_reference' => [
-                'required_if:payment_method,BANK_TRANSFER',
+            // Vodafone Cash fields
+            'vodafone_number' => [
+                'required_if:payment_method,VODAFONE_CASH',
+                'nullable',
+                'string',
+                'regex:/^01[0125][0-9]{8}$/', // Egyptian mobile number format
+            ],
+            'vodafone_reference' => [
+                'required_if:payment_method,VODAFONE_CASH',
+                'nullable',
+                'string',
+                'max:50'
+            ],
+            
+            // InstaPay fields
+            'instapay_reference' => [
+                'required_if:payment_method,INSTAPAY',
+                'nullable',
+                'string',
+                'max:100'
+            ],
+            'instapay_account' => [
+                'required_if:payment_method,INSTAPAY',
+                'nullable',
+                'string',
+                'max:100'
+            ],
+            
+            // Bank Account fields
+            'bank_account_number' => [
+                'required_if:payment_method,BANK_ACCOUNT',
+                'nullable',
+                'string',
+                'max:50'
+            ],
+            'bank_account_name' => [
+                'required_if:payment_method,BANK_ACCOUNT',
+                'nullable',
+                'string',
+                'max:100'
+            ],
+            'bank_transaction_reference' => [
+                'required_if:payment_method,BANK_ACCOUNT',
                 'nullable',
                 'string',
                 'max:100'
@@ -129,9 +169,25 @@ class StorePaymentRequest extends FormRequest
             
             'cheque_status.in' => 'حالة الشيك غير صالحة',
             
-            // Bank transfer validations
-            'transaction_reference.required_if' => 'رقم المعاملة مطلوب عند اختيار التحويل البنكي',
-            'transaction_reference.max' => 'رقم المعاملة لا يمكن أن يتجاوز 100 حرف',
+            // Vodafone Cash validations
+            'vodafone_number.required_if' => 'رقم فودافون كاش مطلوب',
+            'vodafone_number.regex' => 'رقم فودافون كاش غير صحيح (يجب أن يكون رقم مصري)',
+            'vodafone_reference.required_if' => 'رقم العملية مطلوب',
+            'vodafone_reference.max' => 'رقم العملية لا يمكن أن يتجاوز 50 حرفاً',
+            
+            // InstaPay validations
+            'instapay_reference.required_if' => 'رقم عملية InstaPay مطلوب',
+            'instapay_reference.max' => 'رقم العملية لا يمكن أن يتجاوز 100 حرف',
+            'instapay_account.required_if' => 'حساب InstaPay مطلوب',
+            'instapay_account.max' => 'حساب InstaPay لا يمكن أن يتجاوز 100 حرف',
+            
+            // Bank Account validations
+            'bank_account_number.required_if' => 'رقم الحساب البنكي مطلوب',
+            'bank_account_number.max' => 'رقم الحساب البنكي لا يمكن أن يتجاوز 50 حرفاً',
+            'bank_account_name.required_if' => 'اسم البنك مطلوب',
+            'bank_account_name.max' => 'اسم البنك لا يمكن أن يتجاوز 100 حرف',
+            'bank_transaction_reference.required_if' => 'رقم المعاملة البنكية مطلوب',
+            'bank_transaction_reference.max' => 'رقم المعاملة البنكية لا يمكن أن يتجاوز 100 حرف',
         ];
     }
 
@@ -151,7 +207,13 @@ class StorePaymentRequest extends FormRequest
             'bank_name' => 'اسم البنك',
             'cheque_date' => 'تاريخ الشيك',
             'cheque_status' => 'حالة الشيك',
-            'transaction_reference' => 'رقم المعاملة',
+            'vodafone_number' => 'رقم فودافون كاش',
+            'vodafone_reference' => 'رقم عملية فودافون كاش',
+            'instapay_reference' => 'رقم عملية InstaPay',
+            'instapay_account' => 'حساب InstaPay',
+            'bank_account_number' => 'رقم الحساب البنكي',
+            'bank_account_name' => 'اسم البنك',
+            'bank_transaction_reference' => 'رقم المعاملة البنكية',
         ];
     }
 

@@ -4,6 +4,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/Login/LoginPage';
 import DashboardPage from './pages/Dashboard/DashboardPage';
 import ProductsPage from './pages/Products/ProductsPage';
+import BranchesPage from './pages/Branches/BranchesPage';
+import InventoryCountsPage from './pages/InventoryCounts/InventoryCountsPage';
 import IssueVouchersPage from './pages/IssueVouchers/IssueVouchersPage';
 import CustomersPage from './pages/Customers/CustomersPage';
 import CustomerProfilePage from './pages/Customers/CustomerProfilePage';
@@ -36,6 +38,24 @@ function App() {
             element={
               <ProtectedRoute>
                 <ProductsPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/branches" 
+            element={
+              <ProtectedRoute>
+                <BranchesPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/inventory-counts" 
+            element={
+              <ProtectedRoute>
+                <InventoryCountsPage />
               </ProtectedRoute>
             } 
           />

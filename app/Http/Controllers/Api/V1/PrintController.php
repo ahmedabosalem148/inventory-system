@@ -271,11 +271,14 @@ class PrintController extends Controller
         $format = $validated['format'] ?? 'pdf';
 
         if ($format === 'html') {
+            // HTML preview (for debugging/preview only)
             return view('pdfs.customer-statement', $data);
         }
 
         $pdf = PDF::loadView('pdfs.customer-statement', $data)->setPaper('a4');
-        return $pdf->download("customer-statement-{$customer->code}.pdf");
+        
+        // Direct download instead of opening in browser
+        return $pdf->download("customer-statement-{$customer->code}-" . date('Y-m-d') . ".pdf");
     }
 
     /**

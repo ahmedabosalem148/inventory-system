@@ -94,11 +94,12 @@ const IssueVoucherDetailsPage = () => {
 
   const handlePrint = async () => {
     try {
-      const response = await apiClient.post(`/issue-vouchers/${id}/print`);
-      // Handle print response - could open PDF or trigger print dialog
-      console.log('Print response:', response.data);
+      // Open print API in new tab - backend will send PDF download
+      const printUrl = `${apiClient.defaults.baseURL}/issue-vouchers/${id}/print`;
+      window.open(printUrl, '_blank');
     } catch (error) {
       console.error('Print failed:', error);
+      alert('فشل في طباعة الإذن');
     }
   };
 

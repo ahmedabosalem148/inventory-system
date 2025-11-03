@@ -543,7 +543,7 @@ const CustomerProfilePage = () => {
                                 التاريخ: {formatDate(payment.payment_date)}
                               </p>
                               <p className="text-sm text-gray-600">
-                                طريقة الدفع: {payment.payment_method === 'cash' ? 'نقدي' : 'تحويل'}
+                                طريقة الدفع: {payment.payment_method ? payment.payment_method.toUpperCase() : 'غير محدد'}
                               </p>
                             </div>
                             <div className="text-left">

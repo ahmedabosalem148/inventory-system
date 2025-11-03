@@ -1,4 +1,4 @@
-import { Home, Package, FileText, RotateCcw, Users, BarChart3, Settings, LogOut } from 'lucide-react';
+import { Home, Package, FileText, RotateCcw, Users, BarChart3, Settings, LogOut, Building2, ClipboardCheck } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
 
@@ -6,6 +6,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   const navigation = [
     { name: 'لوحة التحكم', href: '/dashboard', icon: Home },
     { name: 'المنتجات', href: '/products', icon: Package },
+    { name: 'المخازن/الفروع', href: '/branches', icon: Building2 },
+    { name: 'جرد المخزون', href: '/inventory-counts', icon: ClipboardCheck },
     { name: 'أذونات الصرف', href: '/issue-vouchers', icon: FileText },
     { name: 'أذونات الإرجاع', href: '/return-vouchers', icon: RotateCcw },
     { name: 'العملاء', href: '/customers', icon: Users },

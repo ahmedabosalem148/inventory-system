@@ -8,10 +8,12 @@ use App\Models\IssueVoucher;
 use App\Models\ReturnVoucher;
 use App\Models\Customer;
 use App\Models\Payment;
+use App\Models\Product;
 use App\Policies\IssueVoucherPolicy;
 use App\Policies\ReturnVoucherPolicy;
 use App\Policies\CustomerPolicy;
 use App\Policies\PaymentPolicy;
+use App\Policies\ProductPolicy;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
         ReturnVoucher::class => ReturnVoucherPolicy::class,
         Customer::class => CustomerPolicy::class,
         Payment::class => PaymentPolicy::class,
+        Product::class => ProductPolicy::class,
     ];
 
     /**
