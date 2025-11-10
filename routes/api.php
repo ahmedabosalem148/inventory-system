@@ -117,6 +117,8 @@ Route::prefix('v1')
         ->name('api.customers.balance');
     Route::get('customers/{customer}/activity', [CustomerController::class, 'getActivity'])
         ->name('api.customers.activity');
+    Route::get('customers/{customer}/ledger', [CustomerController::class, 'getLedger'])
+        ->name('api.customers.ledger');
     
     Route::apiResource('customers', CustomerController::class)->names('api.customers');
 
@@ -165,6 +167,8 @@ Route::prefix('v1')
     Route::apiResource('payments', PaymentController::class)->names('api.payments');
     
     Route::prefix('cheques')->name('api.cheques.')->group(function () {
+        Route::get('/', [PaymentController::class, 'getCheques'])->name('index');
+        Route::get('stats', [PaymentController::class, 'chequeStats'])->name('stats');
         Route::get('pending', [PaymentController::class, 'pendingCheques'])->name('pending');
         Route::get('overdue', [PaymentController::class, 'overdueCheques'])->name('overdue');
         Route::get('cleared', [PaymentController::class, 'clearedCheques'])->name('cleared');

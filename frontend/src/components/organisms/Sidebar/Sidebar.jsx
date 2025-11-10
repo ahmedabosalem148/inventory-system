@@ -1,4 +1,4 @@
-import { Home, Package, FileText, RotateCcw, Users, BarChart3, Settings, LogOut, Building2, ClipboardCheck } from 'lucide-react';
+import { Home, Package, FileText, RotateCcw, Users, BarChart3, Settings, LogOut, Building2, ClipboardCheck, CreditCard } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
 
@@ -11,6 +11,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'أذونات الصرف', href: '/issue-vouchers', icon: FileText },
     { name: 'أذونات الإرجاع', href: '/return-vouchers', icon: RotateCcw },
     { name: 'العملاء', href: '/customers', icon: Users },
+    { name: 'الشيكات', href: '/cheques', icon: CreditCard },
     { name: 'التقارير', href: '/reports', icon: BarChart3 },
     { name: 'الإعدادات', href: '/settings', icon: Settings },
   ];

@@ -35,6 +35,8 @@ interface ReturnVoucherItem {
 }
 
 interface ReturnVoucherFormData {
+  voucher_number: string
+  issue_voucher_id: number | null
   customer_id: number | null
   customer_name: string
   branch_id: number | null
@@ -60,6 +62,8 @@ export default function ReturnVoucherDialog({
   customerId,
 }: ReturnVoucherDialogProps) {
   const [formData, setFormData] = useState<ReturnVoucherFormData>({
+    voucher_number: '',
+    issue_voucher_id: null,
     customer_id: customerId || null,
     customer_name: '',
     branch_id: null,
@@ -323,8 +327,38 @@ export default function ReturnVoucherDialog({
 
         {/* Form */}
         <div className="p-6 space-y-6">
-          {/* Basic Info */}
+          {/* Basic Info - Row 1 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Voucher Number */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                رقم الإذن <span className="text-red-600">*</span>
+              </label>
+              <Input
+                type="text"
+                name="voucher_number"
+                placeholder="RV-000001"
+                value={formData.voucher_number || ''}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            {/* Issue Voucher */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                إذن الصرف المرجع <span className="text-red-600">*</span>
+              </label>
+              <Input
+                type="number"
+                name="issue_voucher_id"
+                placeholder="رقم إذن الصرف"
+                value={formData.issue_voucher_id || ''}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
             {/* Customer */}
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -357,7 +391,7 @@ export default function ReturnVoucherDialog({
                       type="text"
                       name="customer_name"
                       placeholder="أو أدخل اسم عميل جديد"
-                      value={formData.customer_name}
+                      value={formData.customer_name || ''}
                       onChange={handleChange}
                       disabled={!!formData.customer_id}
                     />
@@ -369,7 +403,10 @@ export default function ReturnVoucherDialog({
                 </p>
               )}
             </div>
+          </div>
 
+          {/* Basic Info - Row 2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Branch */}
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -433,7 +470,7 @@ export default function ReturnVoucherDialog({
             </label>
             <select
               name="reason_category"
-              value={formData.reason_category}
+              value={formData.reason_category || ''}
               onChange={handleChange}
               className="w-full px-4 py-2 border rounded-md"
             >
@@ -590,7 +627,7 @@ export default function ReturnVoucherDialog({
             <label className="block text-sm font-medium mb-2">ملاحظات</label>
             <textarea
               name="notes"
-              value={formData.notes}
+              value={formData.notes || ''}
               onChange={handleChange}
               placeholder="ملاحظات إضافية..."
               rows={3}

@@ -9,7 +9,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 class ValidReturnVoucherNumber implements ValidationRule
 {
     public function __construct(
-        private int $branchId,
+        private ?int $branchId = null,
         private ?int $excludeVoucherId = null
     ) {}
 
@@ -30,8 +30,8 @@ class ValidReturnVoucherNumber implements ValidationRule
         $existingVoucher = $query->first();
         
         if ($existingVoucher) {
-            // Check if it belongs to a different branch
-            if ($existingVoucher->branch_id != $this->branchId) {
+            // Check if it belongs to a different branch (only if branchId is set)
+            if ($this->branchId && $existingVoucher->branch_id != $this->branchId) {
                 $fail("رقم الإذن ({$value}) مستخدم بالفعل في فرع آخر");
             } else {
                 $fail("رقم الإذن ({$value}) مستخدم بالفعل");

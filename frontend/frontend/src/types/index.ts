@@ -402,7 +402,7 @@ export interface InvoicePayment {
 }
 
 export interface CreateSalesInvoiceInput {
-  customer_id: number
+  customer_id?: number // Optional: can be omitted if customer_name provided
   customer_name?: string // Optional: can be stored if customer is new
   branch_id: number
   issue_type?: 'SALE' | 'TRANSFER' // Type of issue voucher
@@ -413,7 +413,7 @@ export interface CreateSalesInvoiceInput {
   voucher_type?: string // Optional: type of voucher
   is_transfer?: boolean // Optional: for branch transfers (deprecated, use issue_type)
   due_date?: string
-  discount_type?: 'PERCENTAGE' | 'FIXED' // Backend field
+  discount_type?: 'percentage' | 'fixed' | 'none' // Backend expects lowercase
   discount_value?: number // Backend field: can be percentage or fixed amount
   discount_percentage?: number // For compatibility
   tax_percentage?: number
@@ -422,7 +422,7 @@ export interface CreateSalesInvoiceInput {
     product_id: number
     quantity: number
     unit_price: number
-    discount_type?: 'PERCENTAGE' | 'FIXED'
+    discount_type?: 'percentage' | 'fixed' | 'none' // Backend expects lowercase
     discount_value?: number
     discount_percentage?: number
     tax_percentage?: number
@@ -578,17 +578,16 @@ export interface Customer {
 export interface CustomerLedger {
   id: number
   customer_id: number
-  entry_date: string
-  type: 'DEBIT' | 'CREDIT'
-  amount: number
-  description: string
-  reference_type?: string
+  transaction_date: string
+  transaction_type: string
+  reference_number: string
   reference_id?: number
-  balance_after: number
-  created_by: number
-  customer?: Customer
-  user?: User
+  debit: number
+  credit: number
+  balance: number
+  notes?: string
   created_at: string
+  updated_at: string
 }
 
 export interface CreateLedgerEntryInput {
@@ -661,12 +660,21 @@ export interface ApiResponse<T> {
 
 export interface PaginatedResponse<T> {
   data: T[]
-  current_page: number
-  last_page: number
-  per_page: number
-  total: number
-  from: number
-  to: number
+  meta?: {
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+    from?: number
+    to?: number
+  }
+  // Legacy pagination fields (for backward compatibility)
+  current_page?: number
+  last_page?: number
+  per_page?: number
+  total?: number
+  from?: number
+  to?: number
 }
 
 export interface ApiError {

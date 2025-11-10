@@ -42,11 +42,11 @@ export const SuppliersPage = () => {
         search: search || undefined,
       })
       setSuppliers(response.data)
-      setTotalPages(response.last_page)
+      setTotalPages(response.meta?.last_page || response.last_page || 1)
       
       // Calculate stats
       setStats({
-        total: response.total,
+        total: response.meta?.total || response.total || 0,
         active: response.data.length,
         withBalance: response.data.filter(s => s.balance && s.balance > 0).length,
       })

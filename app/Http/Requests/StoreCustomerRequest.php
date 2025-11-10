@@ -23,32 +23,16 @@ class StoreCustomerRequest extends FormRequest
     {
         return [
             // Basic Information
-            'name' => ['required', 'string', 'max:255'],
-            'customer_code' => ['nullable', 'string', 'max:50', 'unique:customers,customer_code'],
-            'customer_type' => ['required', 'in:INDIVIDUAL,COMPANY'],
+            'name' => ['required', 'string', 'max:200'],
+            'code' => ['nullable', 'string', 'max:50', 'unique:customers,code'],
+            'type' => ['nullable', 'in:retail,wholesale'], // قطاعي أو جملة (default: retail)
             
             // Contact Information
-            'phone' => [
-                'required',
-                'string',
-                'max:20',
-                'regex:/^(\+2)?01[0-2,5]{1}[0-9]{8}$/' // Egyptian phone format
-            ],
-            'email' => ['nullable', 'email', 'max:255', 'unique:customers,email'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'country' => ['nullable', 'string', 'max:100'],
-            
-            // Credit Information
-            'credit_limit' => ['nullable', 'numeric', 'min:0'],
-            'payment_terms_days' => ['nullable', 'integer', 'min:0', 'max:365'],
-            
-            // Branch Assignment
-            'branches' => ['nullable', 'array'],
-            'branches.*' => ['integer', 'exists:branches,id'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'address' => ['nullable', 'string'],
             
             // Other fields
-            'notes' => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
@@ -60,38 +44,14 @@ class StoreCustomerRequest extends FormRequest
     {
         return [
             'name.required' => 'اسم العميل مطلوب',
-            'name.string' => 'اسم العميل يجب أن يكون نصاً',
-            'name.max' => 'اسم العميل لا يمكن أن يتجاوز 255 حرفاً',
+            'name.max' => 'اسم العميل لا يمكن أن يتجاوز 200 حرف',
             
-            'customer_code.unique' => 'رمز العميل مستخدم بالفعل',
-            'customer_code.max' => 'رمز العميل لا يمكن أن يتجاوز 50 حرفاً',
+            'code.unique' => 'كود العميل مستخدم بالفعل',
+            'code.max' => 'كود العميل لا يمكن أن يتجاوز 50 حرف',
             
-            'customer_type.required' => 'نوع العميل مطلوب',
-            'customer_type.in' => 'نوع العميل يجب أن يكون فرد أو شركة',
+            'type.in' => 'نوع العميل يجب أن يكون قطاعي أو جملة',
             
-            'phone.required' => 'رقم الهاتف مطلوب',
-            'phone.regex' => 'صيغة رقم الهاتف غير صحيحة (مثال: 01012345678 أو +201012345678)',
-            'phone.max' => 'رقم الهاتف لا يمكن أن يتجاوز 20 حرفاً',
-            
-            'email.email' => 'البريد الإلكتروني غير صالح',
-            'email.unique' => 'البريد الإلكتروني مستخدم بالفعل',
-            'email.max' => 'البريد الإلكتروني لا يمكن أن يتجاوز 255 حرفاً',
-            
-            'address.max' => 'العنوان لا يمكن أن يتجاوز 500 حرف',
-            'city.max' => 'المدينة لا يمكن أن تتجاوز 100 حرف',
-            'country.max' => 'الدولة لا يمكن أن تتجاوز 100 حرف',
-            
-            'credit_limit.numeric' => 'حد الائتمان يجب أن يكون رقماً',
-            'credit_limit.min' => 'حد الائتمان لا يمكن أن يكون سالباً',
-            
-            'payment_terms_days.integer' => 'مدة الدفع يجب أن تكون عدداً صحيحاً',
-            'payment_terms_days.min' => 'مدة الدفع لا يمكن أن تكون سالبة',
-            'payment_terms_days.max' => 'مدة الدفع لا يمكن أن تتجاوز 365 يوماً',
-            
-            'branches.array' => 'الفروع يجب أن تكون مصفوفة',
-            'branches.*.exists' => 'الفرع المحدد غير موجود',
-            
-            'notes.max' => 'الملاحظات لا يمكن أن تتجاوز 1000 حرف',
+            'phone.max' => 'رقم الهاتف لا يمكن أن يتجاوز 20 حرف',
             
             'is_active.boolean' => 'حالة التفعيل يجب أن تكون صحيح أو خطأ',
         ];

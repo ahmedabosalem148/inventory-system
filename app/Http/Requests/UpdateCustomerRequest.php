@@ -27,14 +27,14 @@ class UpdateCustomerRequest extends FormRequest
         return [
             // Basic Information
             'name' => ['sometimes', 'string', 'max:255'],
-            'customer_code' => [
+            'code' => [
                 'sometimes',
                 'nullable',
                 'string',
                 'max:50',
-                Rule::unique('customers', 'customer_code')->ignore($customerId)
+                Rule::unique('customers', 'code')->ignore($customerId)
             ],
-            'customer_type' => ['sometimes', 'in:INDIVIDUAL,COMPANY'],
+            'type' => ['sometimes', 'in:INDIVIDUAL,COMPANY'],
             
             // Contact Information
             'phone' => [
@@ -77,10 +77,10 @@ class UpdateCustomerRequest extends FormRequest
             'name.string' => 'اسم العميل يجب أن يكون نصاً',
             'name.max' => 'اسم العميل لا يمكن أن يتجاوز 255 حرفاً',
             
-            'customer_code.unique' => 'رمز العميل مستخدم بالفعل',
-            'customer_code.max' => 'رمز العميل لا يمكن أن يتجاوز 50 حرفاً',
+            'code.unique' => 'رمز العميل مستخدم بالفعل',
+            'code.max' => 'رمز العميل لا يمكن أن يتجاوز 50 حرفاً',
             
-            'customer_type.in' => 'نوع العميل يجب أن يكون فرد أو شركة',
+            'type.in' => 'نوع العميل يجب أن يكون فرد أو شركة',
             
             'phone.regex' => 'صيغة رقم الهاتف غير صحيحة (مثال: 01012345678 أو +201012345678)',
             'phone.max' => 'رقم الهاتف لا يمكن أن يتجاوز 20 حرفاً',
@@ -116,8 +116,8 @@ class UpdateCustomerRequest extends FormRequest
     {
         return [
             'name' => 'اسم العميل',
-            'customer_code' => 'رمز العميل',
-            'customer_type' => 'نوع العميل',
+            'code' => 'رمز العميل',
+            'type' => 'نوع العميل',
             'phone' => 'رقم الهاتف',
             'email' => 'البريد الإلكتروني',
             'address' => 'العنوان',
@@ -131,3 +131,4 @@ class UpdateCustomerRequest extends FormRequest
         ];
     }
 }
+

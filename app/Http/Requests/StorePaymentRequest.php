@@ -24,7 +24,7 @@ class StorePaymentRequest extends FormRequest
     {
         return [
             // Basic fields
-            'issue_voucher_id' => ['required', 'integer', 'exists:issue_vouchers,id'],
+            'issue_voucher_id' => ['nullable', 'integer', 'exists:issue_vouchers,id'],
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'min:0.01'],
@@ -76,10 +76,16 @@ class StorePaymentRequest extends FormRequest
                     }
                 }
             ],
+            'cheque_due_date' => [
+                'required_if:payment_method,CHEQUE',
+                'nullable',
+                'date',
+                'after_or_equal:cheque_date',
+            ],
             'cheque_status' => [
                 'sometimes',
                 'nullable',
-                'in:PENDING,CLEARED,BOUNCED,CANCELLED'
+                'in:PENDING,CLEARED,RETURNED,CANCELLED'
             ],
             
             // Vodafone Cash fields
@@ -138,7 +144,6 @@ class StorePaymentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'issue_voucher_id.required' => 'إذن الصرف مطلوب',
             'issue_voucher_id.exists' => 'إذن الصرف المحدد غير موجود',
             
             'customer_id.required' => 'العميل مطلوب',

@@ -18,7 +18,7 @@ interface ProductFiltersDialogProps {
 }
 
 export function ProductFiltersDialog({ filters, onApply, onClose }: ProductFiltersDialogProps) {
-  const [categories, setCategories] = useState<string[]>([])
+  const [categories, setCategories] = useState<Array<{id: number; name: string}>>([])
   const [localFilters, setLocalFilters] = useState<ProductsListParams>(filters)
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export function ProductFiltersDialog({ filters, onApply, onClose }: ProductFilte
               >
                 <option value="">جميع الفئات</option>
                 {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat.id} value={cat.name}>{cat.name}</option>
                 ))}
               </select>
             </div>

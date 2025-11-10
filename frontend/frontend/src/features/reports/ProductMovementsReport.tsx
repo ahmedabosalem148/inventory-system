@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { toast } from 'react-hot-toast'
 import apiClient from '@/app/axios'
 import { getProducts } from '@/services/api/products'
-import type { Product, ProductClassification, PRODUCT_CLASSIFICATION_LABELS } from '@/types'
+import type { Product, ProductClassification } from '@/types'
 
 interface Movement {
   id: number

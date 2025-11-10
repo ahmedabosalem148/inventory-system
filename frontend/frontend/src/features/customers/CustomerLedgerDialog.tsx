@@ -121,17 +121,6 @@ export const CustomerLedgerDialog = ({ customer, onClose }: CustomerLedgerDialog
     }
   }
 
-  /**
-   * Get entry type badge
-   */
-  const getEntryTypeBadge = (type: string) => {
-    return type === 'DEBIT' ? (
-      <Badge variant="success">مدين</Badge>
-    ) : (
-      <Badge variant="danger">دائن</Badge>
-    )
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl my-8 mx-4">
@@ -264,17 +253,21 @@ export const CustomerLedgerDialog = ({ customer, onClose }: CustomerLedgerDialog
                 ) : (
                   ledgerEntries.map((entry) => (
                     <tr key={entry.id}>
-                      <td className="px-4 py-3 text-sm">{formatDate(entry.entry_date)}</td>
-                      <td className="px-4 py-3">{getEntryTypeBadge(entry.type)}</td>
-                      <td className="px-4 py-3 text-sm">{entry.description}</td>
+                      <td className="px-4 py-3 text-sm">{formatDate(entry.transaction_date)}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={entry.debit > 0 ? "success" : "danger"}>
+                          {entry.transaction_type}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{entry.reference_number}</td>
                       <td className="px-4 py-3 font-medium text-green-600">
-                        {entry.type === 'DEBIT' ? formatCurrency(entry.amount) : '-'}
+                        {entry.debit > 0 ? formatCurrency(entry.debit) : '-'}
                       </td>
                       <td className="px-4 py-3 font-medium text-red-600">
-                        {entry.type === 'CREDIT' ? formatCurrency(entry.amount) : '-'}
+                        {entry.credit > 0 ? formatCurrency(entry.credit) : '-'}
                       </td>
                       <td className="px-4 py-3 font-bold">
-                        {formatCurrency(entry.balance_after)}
+                        {formatCurrency(entry.balance)}
                       </td>
                     </tr>
                   ))

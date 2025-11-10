@@ -12,6 +12,7 @@ use App\Rules\MaxDiscountValue;
 use App\Rules\SufficientStock;
 use App\Services\InventoryService;
 use App\Services\LedgerService;
+use App\Services\CustomerLedgerService;
 use App\Services\SequencerService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class IssueVoucherController extends Controller
     public function __construct(
         private InventoryService $inventoryService,
         private LedgerService $ledgerService,
+        private CustomerLedgerService $customerLedgerService,
         private SequencerService $sequencerService
     ) {}
 
@@ -265,11 +267,18 @@ class IssueVoucherController extends Controller
             // توليد رقم الإذن
             $voucherNumber = $this->sequencerService->getNextSequence('issue_vouchers');
 
+            // Get customer name from database if customer_id provided
+            $customerName = $validated['customer_name'] ?? null;
+            if (!empty($validated['customer_id']) && !$customerName) {
+                $customer = \App\Models\Customer::find($validated['customer_id']);
+                $customerName = $customer ? $customer->name : null;
+            }
+
             // إنشاء الإذن
             $voucher = IssueVoucher::create([
                 'voucher_number' => $voucherNumber,
                 'customer_id' => $validated['customer_id'] ?? null,
-                'customer_name' => $validated['customer_name'],
+                'customer_name' => $customerName,
                 'branch_id' => $validated['branch_id'],
                 'issue_date' => $validated['issue_date'],
                 'notes' => $validated['notes'] ?? null,
@@ -311,12 +320,14 @@ class IssueVoucherController extends Controller
 
             // تسجيل في الحسابات (إذا كان العميل مسجل)
             if ($voucher->customer_id) {
-                $this->ledgerService->recordDebit(
+                $this->customerLedgerService->addEntry(
                     customerId: $voucher->customer_id,
-                    amount: $voucher->net_total,
                     description: "إذن صرف رقم {$voucherNumber}",
-                    referenceType: 'issue_voucher',
-                    referenceId: $voucher->id
+                    debitAliah: $voucher->net_total,  // العميل عليه (مدين)
+                    creditLah: 0,
+                    refTable: 'issue_vouchers',
+                    refId: $voucher->id,
+                    createdBy: auth()->id()
                 );
             }
 
@@ -346,8 +357,8 @@ class IssueVoucherController extends Controller
     {
         $user = $request->user();
 
-        // Check access: admin sees all, regular users need access to branch
-        if (!$user->hasRole('super-admin')) {
+        // Check access: admin and manager see all, regular users need access to branch
+        if (!$user->hasRole(['super-admin', 'manager'])) {
             if (!$user->canAccessBranch($issueVoucher->branch_id)) {
                 return response()->json([
                     'message' => 'ليس لديك صلاحية لعرض هذا الإذن'
@@ -373,8 +384,8 @@ class IssueVoucherController extends Controller
     {
         $user = $request->user();
 
-        // Check access: admin sees all, regular users need access to branch
-        if (!$user->hasRole('super-admin')) {
+        // Check access: admin and manager see all, regular users need access to branch
+        if (!$user->hasRole(['super-admin', 'manager'])) {
             if (!$user->canAccessBranch($issueVoucher->branch_id)) {
                 return response()->json([
                     'message' => 'ليس لديك صلاحية لطباعة هذا الإذن'

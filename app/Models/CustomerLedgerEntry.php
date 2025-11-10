@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * 
  * @property int $id
  * @property int $customer_id
- * @property string $entry_date
+ * @property string $transaction_date
  * @property string $description
  * @property float $debit_aliah علية - مديونية على العميل
  * @property float $credit_lah له - دائنية للعميل
@@ -44,12 +44,13 @@ class CustomerLedgerEntry extends Model
      */
     protected $fillable = [
         'customer_id',
-        'entry_date',
-        'description',
-        'debit_aliah',
-        'credit_lah',
-        'ref_table',
-        'ref_id',
+        'transaction_date',
+        'transaction_type',
+        'reference_number',
+        'reference_id',
+        'debit',
+        'credit',
+        'balance',
         'notes',
         'created_by',
     ];
@@ -58,9 +59,9 @@ class CustomerLedgerEntry extends Model
      * The attributes that should be cast.
      */
     protected $casts = [
-        'entry_date' => 'date',
-        'debit_aliah' => 'decimal:2',
-        'credit_lah' => 'decimal:2',
+        'transaction_date' => 'date',
+        'debit' => 'decimal:2',
+        'credit' => 'decimal:2',
         'customer_id' => 'integer',
         'ref_id' => 'integer',
         'created_by' => 'integer',
@@ -90,7 +91,7 @@ class CustomerLedgerEntry extends Model
      */
     public function getNetAmountAttribute(): float
     {
-        return $this->debit_aliah - $this->credit_lah;
+        return $this->debit - $this->credit;
     }
 
     /**
@@ -100,9 +101,9 @@ class CustomerLedgerEntry extends Model
      */
     public function getEntryTypeAttribute(): string
     {
-        if ($this->debit_aliah > 0 && $this->credit_lah == 0) {
+        if ($this->debit > 0 && $this->credit == 0) {
             return 'debit'; // قيد علية (مديونية)
-        } elseif ($this->credit_lah > 0 && $this->debit_aliah == 0) {
+        } elseif ($this->credit > 0 && $this->debit == 0) {
             return 'credit'; // قيد له (دائنية)
         } else {
             return 'zero'; // قيد صفري
@@ -136,7 +137,7 @@ class CustomerLedgerEntry extends Model
      */
     public function scopeDateRange($query, $startDate, $endDate)
     {
-        return $query->whereBetween('entry_date', [$startDate, $endDate]);
+        return $query->whereBetween('transaction_date', [$startDate, $endDate]);
     }
 
     /**
@@ -144,7 +145,7 @@ class CustomerLedgerEntry extends Model
      */
     public function scopeDebitsOnly($query)
     {
-        return $query->where('debit_aliah', '>', 0);
+        return $query->where('debit', '>', 0);
     }
 
     /**
@@ -152,6 +153,7 @@ class CustomerLedgerEntry extends Model
      */
     public function scopeCreditsOnly($query)
     {
-        return $query->where('credit_lah', '>', 0);
+        return $query->where('credit', '>', 0);
     }
 }
+

@@ -53,14 +53,14 @@ export const SalesPage = () => {
 
       const response = await getInvoices(params)
       setInvoices(response.data)
-      setTotalPages(response.last_page)
-      setTotalItems(response.total)
+      setTotalPages(response.meta?.last_page || response.last_page || 1)
+      setTotalItems(response.meta?.total || response.total || 0)
 
       // Calculate stats (use net_total as it's the final amount after discount)
       const totalAmount = response.data.reduce((sum, inv) => sum + (inv.net_total || inv.total_amount), 0)
       const paidAmount = response.data.reduce((sum, inv) => sum + (inv.paid_amount || 0), 0)
       setStats({
-        total: response.total,
+        total: response.meta?.total || response.total || 0,
         totalAmount,
         paidAmount,
         pendingAmount: totalAmount - paidAmount,

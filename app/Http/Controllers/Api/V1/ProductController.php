@@ -7,6 +7,7 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\Api\V1\ProductResource;
 use App\Models\Product;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * عرض قائمة المنتجات مع فلترة وبحث متقدم
      * 

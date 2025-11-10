@@ -8,7 +8,7 @@ use App\Http\Resources\Api\V1\PaymentResource;
 use App\Models\Payment;
 use App\Models\Cheque;
 use App\Rules\UniqueChequeNumber;
-use App\Services\LedgerService;
+use App\Services\CustomerLedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -16,7 +16,7 @@ use Illuminate\Validation\Rule;
 class PaymentController extends Controller
 {
     public function __construct(
-        private LedgerService $ledgerService
+        private CustomerLedgerService $customerLedgerService
     ) {}
 
     /**
@@ -72,15 +72,15 @@ class PaymentController extends Controller
             $chequeId = null;
 
             // إذا كان الدفع بشيك، نسجل الشيك أولاً
-            if ($validated['payment_method'] === 'cheque') {
+            if (strtoupper($validated['payment_method']) === 'CHEQUE') {
                 $cheque = Cheque::create([
+                    'customer_id' => $validated['customer_id'],
                     'cheque_number' => $validated['cheque_number'],
-                    'cheque_date' => $validated['cheque_date'],
+                    'bank_name' => $validated['bank_name'] ?? null,
                     'due_date' => $validated['cheque_due_date'],
                     'amount' => $validated['amount'],
-                    'bank_name' => $validated['bank_name'],
-                    'customer_id' => $validated['customer_id'],
-                    'status' => 'pending',
+                    'status' => 'PENDING',
+                    'notes' => $validated['notes'] ?? null,
                     'created_by' => auth()->id(),
                 ]);
                 $chequeId = $cheque->id;
@@ -98,12 +98,14 @@ class PaymentController extends Controller
             ]);
 
             // تسجيل في دفتر الحسابات
-            $this->ledgerService->recordCredit(
+            $this->customerLedgerService->addEntry(
                 customerId: $payment->customer_id,
-                amount: $payment->amount,
-                description: "سداد {$this->getPaymentMethodLabel($payment->payment_method)}",
-                date: $payment->payment_date,
-                paymentId: $payment->id
+                description: "سداد {$this->getPaymentMethodLabel($payment->payment_method)} - رقم {$payment->id}",
+                debitAliah: 0,
+                creditLah: $payment->amount,
+                refTable: 'payments',
+                refId: $payment->id,
+                createdBy: auth()->id()
             );
 
             DB::commit();
@@ -153,13 +155,16 @@ class PaymentController extends Controller
         try {
             DB::beginTransaction();
 
-            // عكس القيد في دفتر الحسابات
-            $this->ledgerService->recordDebit(
+            // عكس القيد في دفتر الحسابات (إضافة مدين لإلغاء الدائن)
+            $this->customerLedgerService->addEntry(
                 customerId: $payment->customer_id,
-                amount: $payment->amount,
-                description: "إلغاء سداد بتاريخ {$payment->payment_date->format('Y-m-d')}",
-                date: now(),
-                paymentId: $payment->id
+                description: "إلغاء سداد - رقم {$payment->id}",
+                debitAliah: $payment->amount,
+                creditLah: 0,
+                refTable: 'payments',
+                refId: $payment->id,
+                notes: 'قيد عكسي لإلغاء الدفعة',
+                createdBy: auth()->id()
             );
 
             // حذف الدفعة
@@ -184,7 +189,7 @@ class PaymentController extends Controller
     public function updateChequeStatus(Request $request, Cheque $cheque)
     {
         $validated = $request->validate([
-            'status' => ['required', Rule::in(['pending', 'cleared', 'bounced'])],
+            'status' => ['required', Rule::in(['PENDING', 'CLEARED', 'RETURNED'])],
             'notes' => 'nullable|string',
         ]);
 
@@ -194,15 +199,19 @@ class PaymentController extends Controller
                 'notes' => $validated['notes'] ?? $cheque->notes,
             ]);
 
-            // إذا ارتد الشيك، نعكس القيد
-            if ($validated['status'] === 'bounced' && $cheque->status !== 'bounced') {
+            // إذا ارتد الشيك، نعكس القيد (إضافة مدين)
+            if ($validated['status'] === 'RETURNED' && $cheque->status !== 'RETURNED') {
                 $payment = $cheque->payment;
                 if ($payment) {
-                    $this->ledgerService->recordDebit(
+                    $this->customerLedgerService->addEntry(
                         customerId: $payment->customer_id,
-                        amount: $payment->amount,
                         description: "ارتداد شيك رقم {$cheque->cheque_number}",
-                        date: now()
+                        debitAliah: $payment->amount,
+                        creditLah: 0,
+                        refTable: 'cheques',
+                        refId: $cheque->id,
+                        notes: 'قيد عكسي لارتداد الشيك',
+                        createdBy: auth()->id()
                     );
                 }
             }
@@ -214,6 +223,155 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'فشل تحديث حالة الشيك: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * الحصول على جميع الشيكات
+     */
+    public function getCheques(Request $request)
+    {
+        $query = Cheque::with(['customer', 'creator']);
+
+        // فلترة بالعميل
+        if ($request->filled('customer_id')) {
+            $query->where('customer_id', $request->customer_id);
+        }
+
+        // فلترة بالحالة
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // بحث برقم الشيك أو اسم العميل
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('cheque_number', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function ($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // فلترة بالتاريخ
+        if ($request->filled('from_date')) {
+            $query->whereDate('due_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('due_date', '<=', $request->to_date);
+        }
+
+        // الترتيب
+        $query->orderBy('due_date', 'asc')->orderBy('id', 'desc');
+
+        // Pagination
+        $perPage = min((int) $request->input('per_page', 20), 100);
+        $cheques = $query->paginate($perPage);
+
+        return response()->json($cheques);
+    }
+
+    /**
+     * إحصائيات الشيكات
+     */
+    public function chequeStats()
+    {
+        $pending = Cheque::where('status', 'PENDING')->count();
+        $overdue = Cheque::where('status', 'PENDING')
+            ->where('due_date', '<', now())
+            ->count();
+        $cleared = Cheque::where('status', 'CLEARED')->count();
+        $returned = Cheque::where('status', 'RETURNED')->count();
+        
+        $totalAmount = Cheque::where('status', 'PENDING')->sum('amount');
+
+        return response()->json([
+            'pending' => $pending,
+            'overdue' => $overdue,
+            'cleared' => $cleared,
+            'returned' => $returned,
+            'total_amount' => $totalAmount,
+        ]);
+    }
+
+    /**
+     * صرف شيك
+     */
+    public function clearCheque(Request $request, Cheque $cheque)
+    {
+        $validated = $request->validate([
+            'cleared_at' => 'nullable|date',
+        ]);
+
+        try {
+            if ($cheque->status !== 'PENDING') {
+                return response()->json([
+                    'message' => 'لا يمكن صرف هذا الشيك. الحالة الحالية: ' . $cheque->status,
+                ], 400);
+            }
+
+            $cheque->update([
+                'status' => 'CLEARED',
+                'cleared_at' => $validated['cleared_at'] ?? now(),
+                'cleared_by' => auth()->id(),
+            ]);
+
+            return response()->json([
+                'message' => 'تم صرف الشيك بنجاح',
+                'data' => $cheque->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'فشل صرف الشيك: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * إرجاع شيك (Bounce)
+     */
+    public function bounceСheque(Request $request, Cheque $cheque)
+    {
+        $validated = $request->validate([
+            'return_reason' => 'required|string|max:500',
+        ]);
+
+        try {
+            if ($cheque->status !== 'PENDING') {
+                return response()->json([
+                    'message' => 'لا يمكن إرجاع هذا الشيك. الحالة الحالية: ' . $cheque->status,
+                ], 400);
+            }
+
+            $cheque->update([
+                'status' => 'RETURNED',
+                'return_reason' => $validated['return_reason'],
+            ]);
+
+            // عكس القيد في دفتر الحسابات (إضافة مدين للعميل)
+            $payment = Payment::where('cheque_id', $cheque->id)->first();
+            if ($payment) {
+                $this->customerLedgerService->addEntry(
+                    customerId: $payment->customer_id,
+                    transactionType: 'cheque_bounced',
+                    referenceNumber: "CHQ-BOUNCE-{$cheque->cheque_number}",
+                    referenceId: $cheque->id,
+                    debit: $payment->amount,
+                    credit: 0,
+                    notes: "ارتداد شيك رقم {$cheque->cheque_number} - {$validated['return_reason']}",
+                    createdBy: auth()->id()
+                );
+            }
+
+            return response()->json([
+                'message' => 'تم إرجاع الشيك بنجاح',
+                'data' => $cheque->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'فشل إرجاع الشيك: ' . $e->getMessage(),
             ], 500);
         }
     }

@@ -55,8 +55,8 @@ export const PurchasesPage = () => {
 
       const response = await getPurchaseOrders(params)
       setOrders(response.data)
-      setTotalPages(response.last_page)
-      setTotalItems(response.total)
+      setTotalPages(response.meta?.last_page || response.last_page || 1)
+      setTotalItems(response.meta?.total || response.total || 0)
 
       // Calculate stats
       const totalAmount = response.data.reduce((sum, order) => sum + order.total_amount, 0)
@@ -64,7 +64,7 @@ export const PurchasesPage = () => {
       const receivedAmount = receivedOrders.reduce((sum, order) => sum + order.total_amount, 0)
       
       setStats({
-        total: response.total,
+        total: response.meta?.total || response.total || 0,
         totalAmount,
         receivedAmount,
         pendingAmount: totalAmount - receivedAmount,

@@ -48,7 +48,7 @@ export const InventoryPage = () => {
         low_stock: showLowStock || undefined,
       })
       setInventory(response.data)
-      setTotalPages(response.last_page)
+      setTotalPages(response.meta?.last_page || response.last_page || 1)
     } catch (error) {
       console.error('Error loading inventory:', error)
     } finally {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Http\Requests\UpdateCustomerRequest;
 use App\Http\Resources\Api\V1\CustomerResource;
+use App\Http\Resources\Api\V1\CustomerLedgerEntryResource;
 use App\Models\Customer;
 use App\Services\CustomerLedgerService;
 use Illuminate\Http\JsonResponse;
@@ -133,6 +134,37 @@ class CustomerController extends Controller
 
         return response()->json([
             'data' => CustomerResource::make($customer),
+        ], 200);
+    }
+
+    /**
+     * Get customer ledger entries
+     * 
+     * GET /api/v1/customers/{id}/ledger
+     */
+    public function getLedger(Request $request, Customer $customer): JsonResponse
+    {
+        $query = $customer->ledgerEntries();
+        
+        if ($request->has('date_from')) {
+            $query->whereDate('transaction_date', '>=', $request->date_from);
+        }
+        if ($request->has('date_to')) {
+            $query->whereDate('transaction_date', '<=', $request->date_to);
+        }
+        
+        $entries = $query->orderBy('transaction_date', 'desc')
+                        ->orderBy('id', 'desc')
+                        ->paginate($request->get('per_page', 50));
+        
+        return response()->json([
+            'data' => CustomerLedgerEntryResource::collection($entries),
+            'meta' => [
+                'current_page' => $entries->currentPage(),
+                'last_page' => $entries->lastPage(),
+                'per_page' => $entries->perPage(),
+                'total' => $entries->total(),
+            ],
         ], 200);
     }
 
@@ -345,8 +377,8 @@ class CustomerController extends Controller
                     'id' => $entry->id,
                     'date' => $entry->transaction_date,
                     'description' => $entry->notes ?? $entry->transaction_type,
-                    'debit_aliah' => $entry->debit,
-                    'credit_lah' => $entry->credit,
+                    'debit' => $entry->debit,
+                    'credit' => $entry->credit,
                     'running_balance' => $entry->running_balance ?? 0,
                     'reference_type' => $entry->transaction_type ?? '',
                     'reference_id' => $entry->reference_id ?? null,
@@ -441,8 +473,8 @@ class CustomerController extends Controller
             $stats = $customer->ledgerEntries()
                 ->selectRaw('
                     COUNT(*) as total_entries,
-                    SUM(debit_aliah) as total_debit,
-                    SUM(credit_lah) as total_credit,
+                    SUM(debit) as total_debit,
+                    SUM(credit) as total_credit,
                     MAX(entry_date) as last_entry_date,
                     MIN(entry_date) as first_entry_date
                 ')

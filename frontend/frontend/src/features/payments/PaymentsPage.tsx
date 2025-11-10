@@ -12,8 +12,8 @@ import PaymentDialog from './PaymentDialog'
 interface Payment {
   id: number
   payment_date: string
-  amount: number
-  payment_method: 'cash' | 'cheque' | 'bank_transfer'
+  amount: number | string
+  payment_method: 'CASH' | 'CHEQUE' | 'BANK_ACCOUNT' | 'VODAFONE_CASH' | 'INSTAPAY'
   customer: {
     id: number
     name: string
@@ -102,19 +102,21 @@ export default function PaymentsPage() {
   const calculateStatistics = (data: Payment[]) => {
     const stats = {
       total_payments: data.length,
-      total_amount: data.reduce((sum, p) => sum + p.amount, 0),
-      cash_total: data.filter(p => p.payment_method === 'cash').reduce((sum, p) => sum + p.amount, 0),
-      cheque_total: data.filter(p => p.payment_method === 'cheque').reduce((sum, p) => sum + p.amount, 0),
-      bank_transfer_total: data.filter(p => p.payment_method === 'bank_transfer').reduce((sum, p) => sum + p.amount, 0),
+      total_amount: data.reduce((sum, p) => sum + Number(p.amount || 0), 0),
+      cash_total: data.filter(p => p.payment_method === 'CASH').reduce((sum, p) => sum + Number(p.amount || 0), 0),
+      cheque_total: data.filter(p => p.payment_method === 'CHEQUE').reduce((sum, p) => sum + Number(p.amount || 0), 0),
+      bank_transfer_total: data.filter(p => p.payment_method === 'BANK_ACCOUNT').reduce((sum, p) => sum + Number(p.amount || 0), 0),
     }
     setStatistics(stats)
   }
 
   const getPaymentMethodBadge = (method: string) => {
     const badges = {
-      cash: { label: 'نقدي', variant: 'success' as const },
-      cheque: { label: 'شيك', variant: 'warning' as const },
-      bank_transfer: { label: 'تحويل بنكي', variant: 'info' as const },
+      CASH: { label: 'نقدي', variant: 'success' as const },
+      CHEQUE: { label: 'شيك', variant: 'warning' as const },
+      BANK_ACCOUNT: { label: 'حساب بنكي', variant: 'info' as const },
+      VODAFONE_CASH: { label: 'فودافون كاش', variant: 'info' as const },
+      INSTAPAY: { label: 'إنستاباي', variant: 'info' as const },
     }
     const badge = badges[method as keyof typeof badges] || { label: method, variant: 'default' as const }
     return <Badge variant={badge.variant}>{badge.label}</Badge>
@@ -154,7 +156,7 @@ export default function PaymentsPage() {
       header: 'المبلغ',
       render: (payment: Payment) => (
         <span className="text-xl font-bold text-green-600">
-          {payment.amount.toFixed(2)} ر.س
+          {Number(payment.amount || 0).toFixed(2)} ر.س
         </span>
       ),
     },
@@ -236,7 +238,7 @@ export default function PaymentsPage() {
             <div>
               <p className="text-sm text-gray-500">إجمالي المبالغ</p>
               <p className="text-2xl font-bold text-green-600 mt-2">
-                {statistics.total_amount.toFixed(2)} ر.س
+                {(statistics.total_amount || 0).toFixed(2)} ر.س
               </p>
             </div>
           </div>
@@ -246,7 +248,7 @@ export default function PaymentsPage() {
           <div>
             <p className="text-sm text-gray-500">نقدي</p>
             <p className="text-xl font-bold text-green-600 mt-2">
-              {statistics.cash_total.toFixed(2)} ر.س
+              {(statistics.cash_total || 0).toFixed(2)} ر.س
             </p>
           </div>
         </Card>
@@ -255,16 +257,16 @@ export default function PaymentsPage() {
           <div>
             <p className="text-sm text-gray-500">شيكات</p>
             <p className="text-xl font-bold text-yellow-600 mt-2">
-              {statistics.cheque_total.toFixed(2)} ر.س
+              {(statistics.cheque_total || 0).toFixed(2)} ر.س
             </p>
           </div>
         </Card>
 
         <Card className="p-6">
           <div>
-            <p className="text-sm text-gray-500">تحويلات بنكية</p>
+            <p className="text-sm text-gray-500">حسابات بنكية</p>
             <p className="text-xl font-bold text-blue-600 mt-2">
-              {statistics.bank_transfer_total.toFixed(2)} ر.س
+              {(statistics.bank_transfer_total || 0).toFixed(2)} ر.س
             </p>
           </div>
         </Card>
@@ -289,9 +291,11 @@ export default function PaymentsPage() {
             className="w-full px-4 py-2 border rounded-md"
           >
             <option value="">جميع طرق الدفع</option>
-            <option value="cash">نقدي</option>
-            <option value="cheque">شيك</option>
-            <option value="bank_transfer">تحويل بنكي</option>
+            <option value="CASH">نقدي</option>
+            <option value="CHEQUE">شيك</option>
+            <option value="BANK_ACCOUNT">حساب بنكي</option>
+            <option value="VODAFONE_CASH">فودافون كاش</option>
+            <option value="INSTAPAY">إنستاباي</option>
           </select>
 
           <div className="relative">

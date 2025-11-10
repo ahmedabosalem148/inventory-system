@@ -358,9 +358,9 @@ export default function IssueVoucherDetailsPage() {
                     <p className="text-xs text-gray-500 font-mono">{item.product.code}</p>
                   </td>
                   <td className="px-4 py-3 font-mono">{item.quantity}</td>
-                  <td className="px-4 py-3 font-mono">{item.unit_price.toFixed(2)} ر.س</td>
+                  <td className="px-4 py-3 font-mono">{Number(item.unit_price).toFixed(2)} ر.س</td>
                   <td className="px-4 py-3 font-mono font-semibold">
-                    {item.subtotal.toFixed(2)} ر.س
+                    {Number(item.subtotal).toFixed(2)} ر.س
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-sm">
@@ -369,13 +369,13 @@ export default function IssueVoucherDetailsPage() {
                       </p>
                       {item.discount_amount > 0 && (
                         <p className="text-xs text-red-600">
-                          (-{item.discount_amount.toFixed(2)} ر.س)
+                          (-{Number(item.discount_amount).toFixed(2)} ر.س)
                         </p>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-3 font-mono font-bold text-green-600">
-                    {item.net_total.toFixed(2)} ر.س
+                    {Number(item.net_total).toFixed(2)} ر.س
                   </td>
                 </tr>
               ))}
@@ -390,7 +390,7 @@ export default function IssueVoucherDetailsPage() {
         <div className="space-y-3 max-w-md mr-auto">
           <div className="flex justify-between text-lg">
             <span>الإجمالي الفرعي:</span>
-            <span className="font-mono font-semibold">{voucher.subtotal.toFixed(2)} ر.س</span>
+            <span className="font-mono font-semibold">{Number(voucher.subtotal).toFixed(2)} ر.س</span>
           </div>
           
           {voucher.discount_amount > 0 && (
@@ -404,7 +404,7 @@ export default function IssueVoucherDetailsPage() {
               <div className="flex justify-between text-lg text-red-600">
                 <span>قيمة الخصم:</span>
                 <span className="font-mono font-semibold">
-                  -{voucher.discount_amount.toFixed(2)} ر.س
+                  -{Number(voucher.discount_amount).toFixed(2)} ر.س
                 </span>
               </div>
             </>
@@ -414,7 +414,7 @@ export default function IssueVoucherDetailsPage() {
             <div className="flex justify-between text-2xl font-bold">
               <span>الصافي النهائي:</span>
               <span className="font-mono text-green-600">
-                {voucher.net_total.toFixed(2)} ر.س
+                {Number(voucher.net_total).toFixed(2)} ر.س
               </span>
             </div>
           </div>

@@ -59,12 +59,12 @@ class CustomerLedgerService
         // إنشاء القيد
         $entry = CustomerLedgerEntry::create([
             'customer_id' => $customerId,
-            'entry_date' => now()->format('Y-m-d'),
-            'description' => $description,
-            'debit_aliah' => $debitAliah,
-            'credit_lah' => $creditLah,
-            'ref_table' => $refTable,
-            'ref_id' => $refId,
+            'transaction_date' => now()->format('Y-m-d'),
+            'transaction_type' => $refTable ?? 'manual', // نوع المعاملة
+            'reference_number' => $description, // رقم المرجع (مثل: إذن صرف رقم ISS-2025/00001)
+            'reference_id' => $refId,
+            'debit' => $debitAliah,
+            'credit' => $creditLah,
             'notes' => $notes,
             'created_by' => $createdBy ?? auth()->id(),
         ]);
@@ -90,12 +90,12 @@ class CustomerLedgerService
         $query = CustomerLedgerEntry::where('customer_id', $customerId);
 
         if ($upToDate) {
-            $query->where('entry_date', '<=', $upToDate);
+            $query->where('transaction_date', '<=', $upToDate);
         }
 
         $result = $query->selectRaw('
-            SUM(debit_aliah) as total_debit,
-            SUM(credit_lah) as total_credit
+            SUM(debit) as total_debit,
+            SUM(credit) as total_credit
         ')->first();
 
         $totalDebit = $result->total_debit ?? 0;
@@ -127,8 +127,8 @@ class CustomerLedgerService
 
         // جلب القيود في الفترة المحددة
         $entries = CustomerLedgerEntry::where('customer_id', $customerId)
-            ->whereBetween('entry_date', [$fromDate, $toDate])
-            ->orderBy('entry_date')
+            ->whereBetween('transaction_date', [$fromDate, $toDate])
+            ->orderBy('transaction_date')
             ->orderBy('id')
             ->get();
 
@@ -137,7 +137,7 @@ class CustomerLedgerService
             $runningBalance = $openingBalance;
             
             $entries = $entries->map(function ($entry) use (&$runningBalance) {
-                $runningBalance += $entry->debit_aliah - $entry->credit_lah;
+                $runningBalance += $entry->debit - $entry->credit;
                 $entry->running_balance = round($runningBalance, 2);
                 return $entry;
             });
@@ -150,8 +150,8 @@ class CustomerLedgerService
             'opening_balance' => round($openingBalance, 2),
             'entries' => $entries,
             'closing_balance' => $this->calculateBalance($customerId, $toDate),
-            'total_debit' => round($entries->sum('debit_aliah'), 2),
-            'total_credit' => round($entries->sum('credit_lah'), 2),
+            'total_debit' => round($entries->sum('debit'), 2),
+            'total_credit' => round($entries->sum('credit'), 2),
         ]);
     }
 
@@ -171,9 +171,9 @@ class CustomerLedgerService
             ->with(['ledgerEntries' => function ($query) {
                 $query->selectRaw('
                     customer_id,
-                    SUM(debit_aliah) as total_debit,
-                    SUM(credit_lah) as total_credit,
-                    MAX(entry_date) as last_entry_date
+                    SUM(debit) as total_debit,
+                    SUM(credit) as total_credit,
+                    MAX(transaction_date) as last_transaction_date
                 ')->groupBy('customer_id');
             }])
             ->get();
@@ -193,7 +193,7 @@ class CustomerLedgerService
                 'balance' => $balance,
                 'total_debit' => round($totalDebit, 2),
                 'total_credit' => round($totalCredit, 2),
-                'last_entry_date' => $ledgerSummary->last_entry_date ?? null,
+                'last_transaction_date' => $ledgerSummary->last_transaction_date ?? null,
                 'last_activity_at' => $customer->last_activity_at,
                 'status' => $balance > 0 ? 'debtor' : ($balance < 0 ? 'creditor' : 'zero'),
                 'status_arabic' => $balance > 0 ? 'مدين' : ($balance < 0 ? 'دائن' : 'متوازن'),
@@ -294,3 +294,4 @@ class CustomerLedgerService
         );
     }
 }
+

@@ -8,6 +8,7 @@ import { X, Plus, Trash2, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { CustomerSearchSelect } from '@/components/CustomerSearchSelect'
 import { toast } from 'react-hot-toast'
 import type { SalesInvoice, CreateSalesInvoiceInput, Product } from '@/types'
 import { createInvoice, updateInvoice, getInvoice } from '@/services/api/invoices'
@@ -266,16 +267,16 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
         : discountFixed
 
       const data: CreateSalesInvoiceInput = {
-        customer_id: customerId,
+        customer_id: customerId > 0 ? customerId : undefined,
         branch_id: branchId,
         issue_type: issueType,
         target_branch_id: issueType === 'TRANSFER' ? targetBranchId : undefined,
         payment_type: issueType === 'SALE' ? paymentType : undefined,
         issue_date: invoiceDate, // Backend uses issue_date
         due_date: dueDate || undefined,
-        discount_type: hasInvoiceDiscount ? invoiceDiscountType.toUpperCase() as 'PERCENTAGE' | 'FIXED' : undefined,
-        discount_value: hasInvoiceDiscount ? invoiceDiscountValue : undefined,
-        tax_percentage: taxPercentage,
+        discount_type: hasInvoiceDiscount ? invoiceDiscountType : 'none',
+        discount_value: hasInvoiceDiscount ? invoiceDiscountValue : 0,
+        tax_percentage: taxPercentage || 0,
         notes: notes || undefined,
         items: items.map((item) => {
           const hasItemDiscount = item.discount_type === 'percentage'
@@ -290,12 +291,14 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
             product_id: item.product_id,
             quantity: item.quantity,
             unit_price: item.unit_price,
-            discount_type: hasItemDiscount ? item.discount_type.toUpperCase() as 'PERCENTAGE' | 'FIXED' : undefined,
-            discount_value: hasItemDiscount ? itemDiscountValue : undefined,
-            tax_percentage: item.tax_percentage,
+            discount_type: hasItemDiscount ? item.discount_type : 'none',
+            discount_value: hasItemDiscount ? itemDiscountValue : 0,
+            tax_percentage: item.tax_percentage || 0,
           }
         }),
       }
+
+      console.log('Sending invoice data:', JSON.stringify(data, null, 2))
 
       if (invoice) {
         await updateInvoice(invoice.id, data)
@@ -313,9 +316,30 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
           onClose(true)
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving invoice:', error)
-      toast.error('فشل حفظ الفاتورة')
+      console.error('Error response:', error.response?.data)
+      
+      // Display validation errors if available
+      if (error.response?.data?.errors) {
+        const errors = error.response.data.errors
+        const errorMessages = Object.entries(errors)
+          .map(([field, messages]: [string, any]) => {
+            // Handle both array and string error formats
+            const messageText = Array.isArray(messages) 
+              ? messages.join(', ') 
+              : typeof messages === 'string' 
+                ? messages 
+                : JSON.stringify(messages)
+            return `${field}: ${messageText}`
+          })
+          .join('\n')
+        toast.error(`فشل التحقق من البيانات:\n${errorMessages}`, { duration: 5000 })
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message, { duration: 5000 })
+      } else {
+        toast.error('فشل حفظ الفاتورة')
+      }
     } finally {
       setLoading(false)
     }
@@ -400,12 +424,12 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
           {/* Invoice Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-              <Label>العميل *</Label>
-              <Input
-                type="number"
-                value={customerId || ''}
-                onChange={(e) => setCustomerId(Number(e.target.value))}
-                placeholder="رقم العميل"
+              <CustomerSearchSelect
+                value={customerId || null}
+                onChange={(id) => setCustomerId(id || 0)}
+                label="العميل"
+                placeholder="ابحث بالاسم..."
+                required
               />
             </div>
 

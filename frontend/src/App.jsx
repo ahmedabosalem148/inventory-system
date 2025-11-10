@@ -12,6 +12,7 @@ import CustomerProfilePage from './pages/Customers/CustomerProfilePage';
 import ReturnVouchersPage from './pages/ReturnVouchers/ReturnVouchersPage';
 import IssueVoucherDetailsPage from './pages/Vouchers/IssueVoucherDetailsPage';
 import ReturnVoucherDetailsPage from './pages/Vouchers/ReturnVoucherDetailsPage';
+import ChequesPage from './pages/Cheques/ChequesPage';
 import StockValuationReport from './pages/Reports/StockValuationReport';
 import ReportsPage from './pages/Reports/ReportsPage';
 
@@ -83,6 +84,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <CustomerProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/cheques" 
+            element={
+              <ProtectedRoute>
+                <ChequesPage />
               </ProtectedRoute>
             } 
           />
