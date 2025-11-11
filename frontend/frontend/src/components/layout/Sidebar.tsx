@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   ShoppingBag,
   ClipboardList,
+  Activity,
   X,
 } from 'lucide-react'
 
@@ -108,6 +109,12 @@ const navigationItems: NavItem[] = [
     icon: ClipboardList,
     href: '#inventory',
     roles: ['manager', 'store_user'],
+  },
+  {
+    label: 'سجل الأنشطة',
+    icon: Activity,
+    href: '#activity-logs',
+    roles: ['admin', 'manager'],
   },
   {
     label: 'الإعدادات',

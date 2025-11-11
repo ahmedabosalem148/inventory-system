@@ -18,7 +18,9 @@ import {
   Settings,
   LogOut,
   Building2,
+  Key,
 } from 'lucide-react'
+import { PasswordChangeDialog } from '@/components/PasswordChangeDialog'
 
 interface NavbarProps {
   onMenuClick: () => void
@@ -27,6 +29,7 @@ interface NavbarProps {
 export function Navbar({ onMenuClick }: NavbarProps) {
   const { user, logout } = useAuth()
   const [selectedBranch, setSelectedBranch] = useState('branch-1')
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
 
   const handleLogout = () => {
     if (confirm('هل تريد تسجيل الخروج؟')) {
@@ -159,9 +162,19 @@ export function Navbar({ onMenuClick }: NavbarProps) {
                   </div>
                 )}
               </div>
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem 
+                className="cursor-pointer"
+                onClick={() => window.location.hash = '#profile'}
+              >
                 <User className="w-4 h-4 ml-2" />
                 الملف الشخصي
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="cursor-pointer"
+                onClick={() => setShowPasswordDialog(true)}
+              >
+                <Key className="w-4 h-4 ml-2" />
+                تغيير كلمة المرور
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer">
                 <Settings className="w-4 h-4 ml-2" />
@@ -189,6 +202,12 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           }}
         />
       </div>
+
+      {/* Password Change Dialog */}
+      <PasswordChangeDialog
+        isOpen={showPasswordDialog}
+        onClose={() => setShowPasswordDialog(false)}
+      />
     </header>
   )
 }

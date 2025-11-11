@@ -2,6 +2,7 @@ import { KPICard } from '@/components/dashboard/KPICard'
 import { SimpleLineChart, SimpleBarChart } from '@/components/dashboard/SimpleCharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { QuickActions } from '@/components/QuickActions'
 import { 
   DollarSign, 
   TrendingUp, 
@@ -99,6 +100,9 @@ export function AccountantDashboard() {
         <h1 className="text-2xl md:text-3xl font-bold mb-2">لوحة تحكم المحاسب</h1>
         <p className="text-gray-600">إدارة الحسابات والمدفوعات والمالية</p>
       </div>
+
+      {/* Quick Actions */}
+      <QuickActions userRole="accounting" />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

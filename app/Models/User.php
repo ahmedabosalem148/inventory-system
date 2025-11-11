@@ -23,8 +23,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'phone',
         'assigned_branch_id',
         'current_branch_id',
+        'is_active',
     ];
 
     /**

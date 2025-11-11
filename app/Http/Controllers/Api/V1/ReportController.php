@@ -1089,5 +1089,195 @@ class ReportController extends Controller
             ->header('Content-Type', 'application/vnd.ms-excel')
             ->header('Content-Disposition', 'attachment; filename="low-stock-report.xlsx"');
     }
+
+    /**
+     * تقرير أعمار الذمم (Customer Aging Report)
+     */
+    public function customerAging(Request $request)
+    {
+        $validated = $request->validate([
+            'as_of_date' => 'nullable|date',
+        ]);
+
+        $asOfDate = $validated['as_of_date'] ?? now()->format('Y-m-d');
+
+        // Get all customers with balances
+        $customers = Customer::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $agingData = [];
+        $totalBalance = 0;
+        $agingTotals = [
+            '0-30' => 0,
+            '31-60' => 0,
+            '61-90' => 0,
+            '91-120' => 0,
+            '120+' => 0,
+            'total' => 0,
+        ];
+
+        foreach ($customers as $customer) {
+            $balance = $this->ledgerService->getBalance($customer->id, $asOfDate);
+            
+            if ($balance <= 0) {
+                continue; // Skip customers with no balance
+            }
+
+            // Calculate aging buckets
+            $aging = $this->calculateAging($customer->id, $asOfDate);
+            
+            $agingData[] = [
+                'customer_id' => $customer->id,
+                'customer_name' => $customer->name,
+                'customer_code' => $customer->code,
+                'phone' => $customer->phone,
+                'aging' => $aging,
+            ];
+
+            $totalBalance += $aging['total'];
+            $agingTotals['0-30'] += $aging['0-30'];
+            $agingTotals['31-60'] += $aging['31-60'];
+            $agingTotals['61-90'] += $aging['61-90'];
+            $agingTotals['91-120'] += $aging['91-120'];
+            $agingTotals['120+'] += $aging['120+'];
+        }
+
+        $agingTotals['total'] = $totalBalance;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'customers' => $agingData,
+                'summary' => [
+                    'total_customers' => count($agingData),
+                    'total_balance' => $totalBalance,
+                    'aging_totals' => $agingTotals,
+                ],
+                'as_of_date' => $asOfDate,
+            ],
+        ]);
+    }
+
+    /**
+     * حساب أعمار الذمم لعميل معين
+     */
+    private function calculateAging($customerId, $asOfDate)
+    {
+        $aging = [
+            '0-30' => 0,
+            '31-60' => 0,
+            '61-90' => 0,
+            '91-120' => 0,
+            '120+' => 0,
+            'total' => 0,
+        ];
+
+        // Get all unpaid vouchers for the customer
+        $vouchers = IssueVoucher::where('customer_id', $customerId)
+            ->where('date', '<=', $asOfDate)
+            ->where('status', '!=', 'cancelled')
+            ->get();
+
+        foreach ($vouchers as $voucher) {
+            // Get unpaid balance for this voucher
+            $voucherBalance = $voucher->total - $voucher->paid;
+            
+            if ($voucherBalance <= 0) {
+                continue;
+            }
+
+            // Calculate days since voucher date
+            $voucherDate = \Carbon\Carbon::parse($voucher->date);
+            $asOfDateCarbon = \Carbon\Carbon::parse($asOfDate);
+            $daysDiff = $voucherDate->diffInDays($asOfDateCarbon);
+
+            // Classify into aging buckets
+            if ($daysDiff <= 30) {
+                $aging['0-30'] += $voucherBalance;
+            } elseif ($daysDiff <= 60) {
+                $aging['31-60'] += $voucherBalance;
+            } elseif ($daysDiff <= 90) {
+                $aging['61-90'] += $voucherBalance;
+            } elseif ($daysDiff <= 120) {
+                $aging['91-120'] += $voucherBalance;
+            } else {
+                $aging['120+'] += $voucherBalance;
+            }
+
+            $aging['total'] += $voucherBalance;
+        }
+
+        return $aging;
+    }
+
+    /**
+     * تصدير تقرير أعمار الذمم إلى Excel أو PDF
+     */
+    public function customerAgingExport(Request $request)
+    {
+        $validated = $request->validate([
+            'as_of_date' => 'nullable|date',
+            'format' => 'required|in:excel,pdf',
+        ]);
+
+        $asOfDate = $validated['as_of_date'] ?? now()->format('Y-m-d');
+        $format = $validated['format'];
+
+        // Get aging data
+        $response = $this->customerAging($request);
+        $data = $response->getData()->data;
+
+        if ($format === 'excel') {
+            return $this->customerAgingExcel($data, $asOfDate);
+        } else {
+            return $this->customerAgingPDF($data, $asOfDate);
+        }
+    }
+
+    /**
+     * تصدير تقرير أعمار الذمم إلى Excel
+     */
+    private function customerAgingExcel($data, $asOfDate)
+    {
+        $csv = "كود العميل,اسم العميل,الهاتف,0-30 يوم,31-60 يوم,61-90 يوم,91-120 يوم,120+ يوم,الإجمالي\n";
+
+        foreach ($data->customers as $customer) {
+            $csv .= "\"{$customer['customer_code']}\",";
+            $csv .= "\"{$customer['customer_name']}\",";
+            $csv .= "\"{$customer['phone']}\",";
+            $csv .= "{$customer['aging']['0-30']},";
+            $csv .= "{$customer['aging']['31-60']},";
+            $csv .= "{$customer['aging']['61-90']},";
+            $csv .= "{$customer['aging']['91-120']},";
+            $csv .= "{$customer['aging']['120+']},";
+            $csv .= "{$customer['aging']['total']}\n";
+        }
+
+        // Add summary
+        $csv .= "\n";
+        $csv .= "الإجمالي,,";
+        $csv .= ",{$data->summary->aging_totals['0-30']}";
+        $csv .= ",{$data->summary->aging_totals['31-60']}";
+        $csv .= ",{$data->summary->aging_totals['61-90']}";
+        $csv .= ",{$data->summary->aging_totals['91-120']}";
+        $csv .= ",{$data->summary->aging_totals['120+']}";
+        $csv .= ",{$data->summary->aging_totals['total']}\n";
+
+        return response($csv)
+            ->header('Content-Type', 'application/vnd.ms-excel; charset=utf-8')
+            ->header('Content-Disposition', "attachment; filename=\"customer-aging-{$asOfDate}.xlsx\"");
+    }
+
+    /**
+     * تصدير تقرير أعمار الذمم إلى PDF
+     */
+    private function customerAgingPDF($data, $asOfDate)
+    {
+        // For now, return the same as Excel
+        // TODO: Implement actual PDF generation with proper formatting
+        return $this->customerAgingExcel($data, $asOfDate);
+    }
 }
+
 

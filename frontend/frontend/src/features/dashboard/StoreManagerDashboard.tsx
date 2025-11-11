@@ -2,6 +2,7 @@ import { KPICard } from '@/components/dashboard/KPICard'
 import { SimpleBarChart, SimpleLineChart } from '@/components/dashboard/SimpleCharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { QuickActions } from '@/components/QuickActions'
 import { 
   Package, 
   TrendingUp,
@@ -102,6 +103,9 @@ export function StoreManagerDashboard() {
         <h1 className="text-2xl md:text-3xl font-bold mb-2">لوحة تحكم أمين المخزن</h1>
         <p className="text-gray-600">إدارة المخزون والحركات اليومية</p>
       </div>
+
+      {/* Quick Actions */}
+      <QuickActions userRole="store_user" />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

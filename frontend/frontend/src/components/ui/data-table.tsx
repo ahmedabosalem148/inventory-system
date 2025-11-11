@@ -118,15 +118,15 @@ export function DataTable<T extends Record<string, any>>({
 
       {/* Table */}
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <table className="w-full min-w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {columns.map((column) => (
                   <th
                     key={column.key}
                     className={cn(
-                      'px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider',
+                      'px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider',
                       column.sortable && 'cursor-pointer select-none hover:bg-gray-100',
                       column.headerClassName
                     )}
@@ -145,7 +145,7 @@ export function DataTable<T extends Record<string, any>>({
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="px-6 py-12 text-center text-sm text-gray-500"
+                    className="px-4 sm:px-6 py-12 text-center text-sm text-gray-500"
                   >
                     {emptyMessage}
                   </td>
@@ -165,7 +165,7 @@ export function DataTable<T extends Record<string, any>>({
                       <td
                         key={column.key}
                         className={cn(
-                          'px-6 py-4 text-sm text-gray-900 whitespace-nowrap',
+                          'px-4 sm:px-6 py-4 text-sm text-gray-900',
                           column.className
                         )}
                       >

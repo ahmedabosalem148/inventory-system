@@ -4,6 +4,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { AppLayout } from '@/components/layout'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Spinner } from '@/components/ui/spinner'
+import { KeyboardShortcuts } from '@/components/KeyboardShortcuts'
 import { ManagerDashboard } from '@/features/dashboard/ManagerDashboard'
 import { AccountantDashboard } from '@/features/dashboard/AccountantDashboard'
 import { StoreManagerDashboard } from '@/features/dashboard/StoreManagerDashboard'
@@ -22,11 +23,14 @@ import {
   ProductMovementReport,
   CustomerBalancesReport,
   CustomerStatementReport,
+  CustomerAgingReport,
   SalesSummaryReport,
   StockValuationReport
 } from '@/features/reports'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { UsersPage } from '@/features/users'
+import { ActivityLogPage } from '@/features/activity/ActivityLogPage'
+import { ProfilePage } from '@/features/profile/ProfilePage'
 import ReturnVouchersPage from '@/features/returns/ReturnVouchersPage'
 import ReturnVoucherDetailsPage from '@/features/returns/ReturnVoucherDetailsPage'
 import IssueVoucherDetailsPage from '@/features/sales/IssueVoucherDetailsPage'
@@ -148,6 +152,8 @@ function App() {
           return <ProductMovementReport />
         case 'customer-balances':
           return <CustomerBalancesReport />
+        case 'customer-aging':
+          return <CustomerAgingReport />
         case 'customer-statement':
           return <CustomerStatementReport />
         case 'sales-summary':
@@ -177,6 +183,10 @@ function App() {
         return <ReportsPage />
       case 'users':
         return <UsersPage />
+      case 'activity-logs':
+        return <ActivityLogPage />
+      case 'profile':
+        return <ProfilePage />
       case 'settings':
         return <SettingsPage />
       case 'return-vouchers':
@@ -195,7 +205,10 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <AppLayout>{renderPage()}</AppLayout>
+      <AppLayout>
+        {renderPage()}
+        <KeyboardShortcuts />
+      </AppLayout>
     </ErrorBoundary>
   )
 }

@@ -66,6 +66,14 @@ export function ReportsPage() {
       color: 'indigo',
     },
     {
+      id: 'customer-aging',
+      title: 'تقرير أعمار الذمم',
+      description: 'تحليل أرصدة العملاء حسب فترات التقادم (30/60/90/120 يوم)',
+      icon: <FileBarChart className="w-6 h-6" />,
+      path: '/reports/customer-aging',
+      color: 'purple',
+    },
+    {
       id: 'customer-statement',
       title: 'كشف حساب عميل',
       description: 'تفاصيل حساب عميل محدد مع الرصيد الجاري',

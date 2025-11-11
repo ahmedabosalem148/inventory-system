@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { X, Plus, Trash2, Save } from 'lucide-react'
+import { X, Plus, Trash2, Save, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -783,7 +783,11 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
             إلغاء
           </Button>
           <Button onClick={handleSubmit} disabled={loading} className="flex-1">
-            <Save className="w-4 h-4 ml-2" />
+            {loading ? (
+              <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 ml-2" />
+            )}
             {loading 
               ? (invoice ? 'جاري التحديث...' : 'جاري الحفظ...')
               : (invoice ? 'تحديث الفاتورة' : 'حفظ الفاتورة')

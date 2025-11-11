@@ -40,6 +40,7 @@ export function LowStockReport() {
   const [data, setData] = useState<LowStockItem[]>([])
   const [summary, setSummary] = useState<LowStockSummary | null>(null)
   const [branchFilter, setBranchFilter] = useState<string>('all')
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     loadReport()
@@ -60,9 +61,31 @@ export function LowStockReport() {
     }
   }
 
-  const handleExport = () => {
-    toast.success('سيتم تصدير التقرير قريباً...')
-    // TODO: Implement export functionality
+  const handleExport = async () => {
+    try {
+      setExporting(true)
+      const params = new URLSearchParams()
+      if (branchFilter !== 'all') params.append('branch_id', branchFilter)
+      
+      const response = await apiClient.get(`/reports/low-stock/excel?${params.toString()}`, {
+        responseType: 'blob',
+      })
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `low-stock-report-${new Date().toISOString().split('T')[0]}.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      
+      toast.success('تم تصدير التقرير بنجاح')
+    } catch (error) {
+      console.error('Error exporting report:', error)
+      toast.error('فشل في تصدير التقرير')
+    } finally {
+      setExporting(false)
+    }
   }
 
   const columns = [
@@ -149,9 +172,14 @@ export function LowStockReport() {
             </p>
           </div>
         </div>
-        <Button size="sm" variant="outline" onClick={handleExport}>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={handleExport}
+          disabled={exporting || loading}
+        >
           <Download className="w-4 h-4 ml-2" />
-          تصدير Excel
+          {exporting ? 'جاري التصدير...' : 'تصدير Excel'}
         </Button>
       </div>
 

@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Users, Plus, Search, Edit, Trash2, Shield } from 'lucide-react'
+import { Users, Plus, Search, Edit, Trash2, Shield, Key } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DataTable } from '@/components/ui/data-table'
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { toast } from 'react-hot-toast'
 import apiClient from '@/services/api/client'
 import { UserDialog } from './UserDialog'
+import { PasswordChangeDialog } from '@/components/PasswordChangeDialog'
 
 interface User {
   id: number
@@ -59,6 +60,8 @@ export function UsersPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [showUserDialog, setShowUserDialog] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null)
 
   useEffect(() => {
     loadUsers()
@@ -76,56 +79,12 @@ export function UsersPage() {
       if (roleFilter !== 'all') params.role = roleFilter
       if (statusFilter !== 'all') params.is_active = statusFilter === 'active'
 
-      // TODO: Replace with actual API endpoint when available
-      // For now using mock data
       const response = await apiClient.get<PaginatedResponse>('/users', { params })
       setUsers(response.data.data)
       setTotalPages(response.data.meta?.last_page || response.data.last_page || 1)
     } catch (error: any) {
       console.error('Error loading users:', error)
-      // Use mock data for now
-      setUsers([
-        {
-          id: 1,
-          name: 'أحمد محمد',
-          email: 'ahmed@example.com',
-          phone: '01012345678',
-          role: 'admin',
-          branch_name: 'المصنع',
-          is_active: true,
-          created_at: '2024-01-15',
-        },
-        {
-          id: 2,
-          name: 'محمد علي',
-          email: 'mohamed@example.com',
-          phone: '01098765432',
-          role: 'manager',
-          branch_name: 'العتبة',
-          is_active: true,
-          created_at: '2024-02-20',
-        },
-        {
-          id: 3,
-          name: 'فاطمة أحمد',
-          email: 'fatma@example.com',
-          phone: '01155556666',
-          role: 'accountant',
-          branch_name: 'المصنع',
-          is_active: true,
-          created_at: '2024-03-10',
-        },
-        {
-          id: 4,
-          name: 'سارة محمود',
-          email: 'sara@example.com',
-          phone: '01077778888',
-          role: 'store_user',
-          branch_name: 'إمبابة',
-          is_active: false,
-          created_at: '2024-04-05',
-        },
-      ])
+      toast.error('فشل في تحميل المستخدمين')
     } finally {
       setLoading(false)
     }
@@ -154,6 +113,16 @@ export function UsersPage() {
       console.error('Error deleting user:', error)
       toast.error(error.response?.data?.message || 'فشل حذف المستخدم')
     }
+  }
+
+  const handleChangePassword = (user: User) => {
+    setPasswordResetUser(user)
+    setShowPasswordDialog(true)
+  }
+
+  const handlePasswordDialogClose = () => {
+    setShowPasswordDialog(false)
+    setPasswordResetUser(null)
   }
 
   const handleDialogClose = (saved: boolean) => {
@@ -247,6 +216,15 @@ export function UsersPage() {
           >
             <Edit className="w-4 h-4 ml-1" />
             تعديل
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleChangePassword(row)}
+            className="text-blue-600 hover:text-blue-700"
+          >
+            <Key className="w-4 h-4 ml-1" />
+            كلمة المرور
           </Button>
           <Button
             size="sm"
@@ -400,6 +378,16 @@ export function UsersPage() {
         <UserDialog
           user={selectedUser}
           onClose={handleDialogClose}
+        />
+      )}
+
+      {/* Password Change Dialog */}
+      {showPasswordDialog && passwordResetUser && (
+        <PasswordChangeDialog
+          isOpen={showPasswordDialog}
+          onClose={handlePasswordDialogClose}
+          userId={passwordResetUser.id}
+          userName={passwordResetUser.name}
         />
       )}
     </div>

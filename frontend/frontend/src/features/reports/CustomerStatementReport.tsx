@@ -3,13 +3,14 @@
  * تقرير كشف حساب عميل - عرض حركات حساب عميل معين
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ArrowLeft, Download, FileText, Calendar } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'react-hot-toast'
 import apiClient from '@/app/axios'
+import { CustomerSearchSelect } from '@/components/CustomerSearchSelect'
 
 interface LedgerEntry {
   id: number
@@ -39,38 +40,12 @@ interface StatementData {
   }
 }
 
-interface Customer {
-  id: number
-  code: string
-  name: string
-  type: string
-}
-
 export function CustomerStatementReport() {
   const [loading, setLoading] = useState(false)
-  const [loadingCustomers, setLoadingCustomers] = useState(true)
   const [data, setData] = useState<StatementData | null>(null)
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null)
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
-
-  useEffect(() => {
-    fetchCustomers()
-  }, [])
-
-  const fetchCustomers = async () => {
-    try {
-      setLoadingCustomers(true)
-      const response = await apiClient.get('/customers')
-      setCustomers(response.data.data || [])
-    } catch (error) {
-      console.error('Failed to fetch customers:', error)
-      toast.error('فشل في تحميل قائمة العملاء')
-    } finally {
-      setLoadingCustomers(false)
-    }
-  }
 
   const fetchReport = async () => {
     if (!selectedCustomerId) {
@@ -95,7 +70,7 @@ export function CustomerStatementReport() {
   }
 
   const handleReset = () => {
-    setSelectedCustomerId('')
+    setSelectedCustomerId(null)
     setFromDate('')
     setToDate('')
     setData(null)
@@ -208,22 +183,13 @@ export function CustomerStatementReport() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Customer Selector */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                العميل <span className="text-red-500">*</span>
-              </label>
-              <select
+              <CustomerSearchSelect
                 value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                disabled={loadingCustomers}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">اختر عميل...</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id.toString()}>
-                    {customer.code} - {customer.name} ({customer.type === 'retail' ? 'قطاعي' : 'جملة'})
-                  </option>
-                ))}
-              </select>
+                onChange={(customerId) => setSelectedCustomerId(customerId)}
+                label="العميل"
+                placeholder="ابحث عن العميل بالاسم أو الكود..."
+                required
+              />
             </div>
 
             {/* From Date */}

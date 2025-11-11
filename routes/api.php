@@ -14,6 +14,9 @@ use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ReturnVoucherController;
 use App\Http\Controllers\Api\V1\UserBranchController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -65,6 +68,24 @@ Route::prefix('v1')
     });
 
     // ========================================================================
+    // Profile Management (إدارة الملف الشخصي)
+    // ========================================================================
+    Route::prefix('profile')->name('api.profile.')->group(function () {
+        Route::get('/', [ProfileController::class, 'show'])->name('show');
+        Route::put('/', [ProfileController::class, 'update'])->name('update');
+        Route::post('change-password', [ProfileController::class, 'changePassword'])->name('change-password');
+    });
+
+    // ========================================================================
+    // User Branch Management (إدارة مخازن المستخدم)
+    // ========================================================================
+    Route::prefix('profile')->name('api.profile.')->group(function () {
+        Route::get('/', [ProfileController::class, 'show'])->name('show');
+        Route::put('/', [ProfileController::class, 'update'])->name('update');
+        Route::post('change-password', [ProfileController::class, 'changePassword'])->name('change-password');
+    });
+
+    // ========================================================================
     // User Branch Management (إدارة مخازن المستخدم)
     // ========================================================================
     Route::prefix('user')->name('api.user.')->group(function () {
@@ -85,6 +106,24 @@ Route::prefix('v1')
     // ========================================================================
     // Core Resources (CRUD operations)
     // ========================================================================
+    
+    // User Management
+    Route::prefix('users')->name('api.users.')->group(function () {
+        Route::get('roles', [UserController::class, 'getRoles'])->name('roles');
+        Route::post('{user}/change-password', [UserController::class, 'changePassword'])->name('change-password');
+        Route::post('{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('toggle-status');
+    });
+    Route::apiResource('users', UserController::class)->names('api.users');
+    
+    // Activity Logs (Admin only)
+    Route::prefix('activity-logs')->name('api.activity-logs.')->group(function () {
+        Route::get('/', [ActivityLogController::class, 'index'])->name('index');
+        Route::get('statistics', [ActivityLogController::class, 'statistics'])->name('statistics');
+        Route::get('log-names', [ActivityLogController::class, 'getLogNames'])->name('log-names');
+        Route::get('subject-types', [ActivityLogController::class, 'getSubjectTypes'])->name('subject-types');
+        Route::get('{activity}', [ActivityLogController::class, 'show'])->name('show');
+    });
+    
     Route::apiResource('branches', BranchController::class)->names('api.branches');
     
     // Categories
@@ -227,6 +266,10 @@ Route::prefix('v1')
         Route::get('customer-balances', [ReportController::class, 'customerBalances'])->name('customer-balances');
         Route::get('customer-balances/pdf', [ReportController::class, 'customerBalancesPDF'])->name('customer-balances-pdf');
         Route::get('customer-balances/excel', [ReportController::class, 'customerBalancesExcel'])->name('customer-balances-excel');
+        
+        // Customer Aging Report
+        Route::get('customer-aging', [ReportController::class, 'customerAging'])->name('customer-aging');
+        Route::get('customer-aging/export', [ReportController::class, 'customerAgingExport'])->name('customer-aging-export');
         
         // Customer Statement Report
         Route::get('customers/{customer}/statement', [ReportController::class, 'customerStatement'])

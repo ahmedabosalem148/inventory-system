@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { X, Plus, Trash2, RotateCcw } from 'lucide-react'
+import { X, Plus, Trash2, RotateCcw, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { showToast } from '@/components/ui/toast'
 import { apiClient } from '@/services/api/client'
+import { CustomerSearchSelect } from '@/components/CustomerSearchSelect'
 
 interface Customer {
   id: number
@@ -78,7 +79,6 @@ export default function ReturnVoucherDialog({
   const [customers, setCustomers] = useState<Customer[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
-  const [searchCustomer, setSearchCustomer] = useState('')
   const [searchProduct, setSearchProduct] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
@@ -293,11 +293,6 @@ export default function ReturnVoucherDialog({
 
   const totals = calculateTotals()
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchCustomer.toLowerCase()) ||
-    customer.code.toLowerCase().includes(searchCustomer.toLowerCase())
-  )
-
   const getFilteredProducts = (itemId: string) => {
     const searchTerm = searchProduct[itemId] || ''
     return products.filter(product =>
@@ -360,49 +355,47 @@ export default function ReturnVoucherDialog({
             </div>
 
             {/* Customer */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                العميل <span className="text-red-600">*</span>
-              </label>
-              {!customerId ? (
-                <>
-                  <Input
-                    type="text"
-                    placeholder="بحث عن العميل..."
-                    value={searchCustomer}
-                    onChange={(e) => setSearchCustomer(e.target.value)}
-                    className="mb-2"
-                  />
-                  <select
-                    name="customer_id"
-                    value={formData.customer_id || ''}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-md"
-                  >
-                    <option value="">اختر العميل</option>
-                    {filteredCustomers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name} ({customer.code})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="mt-2">
-                    <Input
-                      type="text"
-                      name="customer_name"
-                      placeholder="أو أدخل اسم عميل جديد"
-                      value={formData.customer_name || ''}
-                      onChange={handleChange}
-                      disabled={!!formData.customer_id}
-                    />
-                  </div>
-                </>
-              ) : (
+            {!customerId ? (
+              <CustomerSearchSelect
+                value={formData.customer_id}
+                onChange={(customerId) => {
+                  setFormData({ 
+                    ...formData, 
+                    customer_id: customerId,
+                    customer_name: customerId ? '' : formData.customer_name 
+                  })
+                }}
+                label="العميل"
+                placeholder="ابحث عن العميل بالاسم أو الكود أو رقم الهاتف..."
+                required={!formData.customer_name}
+                error={!formData.customer_id && !formData.customer_name && loading ? 'الرجاء اختيار العميل أو إدخال اسمه' : ''}
+              />
+            ) : (
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  العميل <span className="text-red-600">*</span>
+                </label>
                 <p className="text-sm py-2">
                   {customers.find(c => c.id === customerId)?.name || 'جاري التحميل...'}
                 </p>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Alternative: Customer Name Input */}
+            {!customerId && !formData.customer_id && (
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  أو أدخل اسم عميل جديد
+                </label>
+                <Input
+                  type="text"
+                  name="customer_name"
+                  placeholder="اسم العميل"
+                  value={formData.customer_name || ''}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
           </div>
 
           {/* Basic Info - Row 2 */}
@@ -642,6 +635,7 @@ export default function ReturnVoucherDialog({
               disabled={loading}
               className="flex-1"
             >
+              {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               {loading ? 'جاري الحفظ...' : 'حفظ واعتماد'}
             </Button>
             <Button
@@ -650,6 +644,7 @@ export default function ReturnVoucherDialog({
               variant="outline"
               className="flex-1"
             >
+              {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               {loading ? 'جاري الحفظ...' : 'حفظ كمسودة'}
             </Button>
             <Button

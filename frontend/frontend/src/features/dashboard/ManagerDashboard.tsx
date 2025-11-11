@@ -2,6 +2,7 @@ import { KPICard } from '@/components/dashboard/KPICard'
 import { SimpleBarChart, SimpleLineChart } from '@/components/dashboard/SimpleCharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { QuickActions } from '@/components/QuickActions'
 import { 
   DollarSign, 
   Package, 
@@ -102,6 +103,9 @@ export function ManagerDashboard() {
         <h1 className="text-2xl md:text-3xl font-bold mb-2">لوحة تحكم المدير</h1>
         <p className="text-gray-600">نظرة شاملة على أداء النظام</p>
       </div>
+
+      {/* Quick Actions */}
+      <QuickActions userRole="manager" />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

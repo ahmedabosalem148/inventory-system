@@ -1,16 +1,10 @@
-import { useState, useEffect } from 'react'
-import { X, DollarSign, CreditCard } from 'lucide-react'
+import { useState } from 'react'
+import { X, DollarSign, CreditCard, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { showToast } from '@/components/ui/toast'
 import { apiClient } from '@/services/api/client'
 import { CustomerSearchSelect } from '@/components/CustomerSearchSelect'
-
-interface Customer {
-  id: number
-  name: string
-  code: string
-}
 
 interface PaymentFormData {
   customer_id: number | null
@@ -67,25 +61,6 @@ export default function PaymentDialog({
     bank_transfer_reference: '',
   })
   const [loading, setLoading] = useState(false)
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [searchCustomer, setSearchCustomer] = useState('')
-
-  useEffect(() => {
-    if (open) {
-      loadCustomers()
-    }
-  }, [open])
-
-  const loadCustomers = async () => {
-    try {
-      const response = await apiClient.get('/customers', {
-        params: { per_page: 100 }
-      })
-      setCustomers(response.data.data || [])
-    } catch (error) {
-      console.error('Error loading customers:', error)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -163,11 +138,6 @@ export default function PaymentDialog({
           : value,
     }))
   }
-
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchCustomer.toLowerCase()) ||
-    customer.code.toLowerCase().includes(searchCustomer.toLowerCase())
-  )
 
   if (!open) return null
 
@@ -464,6 +434,7 @@ export default function PaymentDialog({
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t">
             <Button type="submit" disabled={loading} className="flex-1">
+              {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               {loading ? 'جاري الحفظ...' : 'تسجيل الدفعة'}
             </Button>
             <Button
