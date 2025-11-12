@@ -37,6 +37,7 @@ import IssueVoucherDetailsPage from '@/features/sales/IssueVoucherDetailsPage'
 import PaymentsPage from '@/features/payments/PaymentsPage'
 import ChequesPage from '@/features/payments/ChequesPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
+import NotificationsPage from '@/pages/NotificationsPage'
 
 function App() {
   const { isAuthenticated, isLoading, user } = useAuth()
@@ -197,6 +198,8 @@ function App() {
         return <ChequesPage />
       case 'branches':
         return <BranchesPage />
+      case 'notifications':
+        return <NotificationsPage />
       case 'dashboard':
       default:
         return getDashboard()

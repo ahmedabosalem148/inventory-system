@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\UserBranchController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Api\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -122,6 +123,21 @@ Route::prefix('v1')
         Route::get('log-names', [ActivityLogController::class, 'getLogNames'])->name('log-names');
         Route::get('subject-types', [ActivityLogController::class, 'getSubjectTypes'])->name('subject-types');
         Route::get('{activity}', [ActivityLogController::class, 'show'])->name('show');
+    });
+
+    // ========================================================================
+    // Notifications (إشعارات النظام)
+    // ========================================================================
+    Route::prefix('notifications')->name('api.notifications.')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::get('unread-count', [NotificationController::class, 'unreadCount'])->name('unread-count');
+        Route::get('recent', [NotificationController::class, 'recent'])->name('recent');
+        Route::get('types', [NotificationController::class, 'types'])->name('types');
+        Route::post('mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+        Route::post('clear-read', [NotificationController::class, 'clearRead'])->name('clear-read');
+        Route::post('{notification}/mark-read', [NotificationController::class, 'markAsRead'])->name('mark-read');
+        Route::post('{notification}/mark-unread', [NotificationController::class, 'markAsUnread'])->name('mark-unread');
+        Route::delete('{notification}', [NotificationController::class, 'destroy'])->name('destroy');
     });
     
     Route::apiResource('branches', BranchController::class)->names('api.branches');

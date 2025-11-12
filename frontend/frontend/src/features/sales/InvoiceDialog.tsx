@@ -4,11 +4,12 @@
  */
 
 import { useState, useEffect } from 'react'
-import { X, Plus, Trash2, Save, Loader2 } from 'lucide-react'
+import { X, Plus, Trash2, Save, Loader2, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CustomerSearchSelect } from '@/components/CustomerSearchSelect'
+import { BarcodeScanner } from '@/components/BarcodeScanner'
 import { toast } from 'react-hot-toast'
 import type { SalesInvoice, CreateSalesInvoiceInput, Product } from '@/types'
 import { createInvoice, updateInvoice, getInvoice } from '@/services/api/invoices'
@@ -38,6 +39,7 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
   const [loading, setLoading] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [warnings, setWarnings] = useState<any[]>([])
+  const [scannerOpen, setScannerOpen] = useState(false)
 
   // Form data
   const [customerId, setCustomerId] = useState<number>(0)
@@ -184,6 +186,58 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
    */
   const handleRemoveItem = (id: string) => {
     setItems(items.filter((item) => item.id !== id))
+  }
+
+  /**
+   * Handle barcode scan
+   */
+  const handleBarcodeScan = async (barcode: string) => {
+    try {
+      // Search for product by barcode
+      const response = await getProducts({ search: barcode, per_page: 100 })
+      
+      if (response.data.length > 0) {
+        const product = response.data[0]
+        
+        // Check if product already in items
+        const existingItem = items.find(item => item.product_id === product.id)
+        
+        if (existingItem) {
+          // Increment quantity
+          setItems(items.map(item =>
+            item.product_id === product.id
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          ))
+          toast.success(`تم زيادة كمية ${product.name}`)
+        } else {
+          // Add new item
+          const newItem: InvoiceLineItem = {
+            id: `item-${Date.now()}`,
+            product_id: product.id,
+            product,
+            quantity: 1,
+            unit_price: product.price || 0,
+            discount_type: 'percentage',
+            discount_percentage: 0,
+            discount_fixed: 0,
+            discount_amount: 0,
+            tax_percentage: 0,
+            tax_amount: 0,
+            total: product.price || 0,
+          }
+          setItems([...items, newItem])
+          toast.success(`تم إضافة ${product.name}`)
+        }
+      } else {
+        toast.error('لم يتم العثور على المنتج بهذا الباركود')
+      }
+    } catch (error) {
+      console.error('Error searching for product:', error)
+      toast.error('خطأ في البحث عن المنتج')
+    } finally {
+      setScannerOpen(false)
+    }
   }
 
   /**
@@ -514,10 +568,16 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
           <div className="mb-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold">الأصناف</h3>
-              <Button onClick={handleAddItem} size="sm">
-                <Plus className="w-4 h-4 ml-2" />
-                إضافة صنف
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setScannerOpen(true)} size="sm" variant="outline">
+                  <Camera className="w-4 h-4 ml-2" />
+                  مسح الباركود
+                </Button>
+                <Button onClick={handleAddItem} size="sm">
+                  <Plus className="w-4 h-4 ml-2" />
+                  إضافة صنف
+                </Button>
+              </div>
             </div>
 
             <div className="border rounded-lg overflow-hidden">
@@ -795,6 +855,13 @@ export const InvoiceDialog = ({ invoice, onClose }: InvoiceDialogProps) => {
           </Button>
         </div>
       </div>
+
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleBarcodeScan}
+      />
     </div>
   )
 }

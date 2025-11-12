@@ -289,6 +289,14 @@ class IssueVoucherController extends Controller
                 'created_by' => auth()->id(),
             ]);
 
+            // Store issue_type and payment_type in notes or data field for tracking
+            if (isset($validated['issue_type'])) {
+                $voucher->issue_type = $validated['issue_type']; // This will be stored if column exists
+            }
+            if (isset($validated['payment_type'])) {
+                $voucher->payment_type = $validated['payment_type']; // This will be stored if column exists
+            }
+
             // إضافة الأصناف وتحديث المخزون
             foreach ($validated['items'] as $itemData) {
                 // حساب تفاصيل البند مع الخصومات
@@ -332,6 +340,9 @@ class IssueVoucherController extends Controller
             }
 
             DB::commit();
+
+            // Send notification for new order
+            $this->sendNewOrderNotification($voucher);
 
             $response = [
                 'data' => new IssueVoucherResource($voucher->load(['customer', 'branch', 'items.product']))
@@ -658,5 +669,51 @@ class IssueVoucherController extends Controller
             'discount_amount' => round($discountAmount, 2),
             'net_price' => round($netPrice, 2),
         ];
+    }
+
+    /**
+     * Send new order notification to managers and accounting
+     */
+    private function sendNewOrderNotification(IssueVoucher $voucher): void
+    {
+        try {
+            $notificationService = new \App\Services\NotificationService();
+            
+            $customerName = $voucher->customer_name ?? 'غير محدد';
+            
+            // Send to managers and accounting
+            $notificationService->sendToRole(
+                'manager',
+                \App\Models\Notification::TYPE_NEW_ORDER,
+                'إذن صرف جديد',
+                "تم إنشاء إذن صرف برقم {$voucher->voucher_number}",
+                [
+                    'voucher_id' => $voucher->id,
+                    'voucher_number' => $voucher->voucher_number,
+                    'customer_name' => $customerName,
+                    'total_amount' => $voucher->net_total,
+                    'branch_id' => $voucher->branch_id,
+                ],
+                "#sales/{$voucher->id}"
+            );
+
+            $notificationService->sendToRole(
+                'accounting',
+                \App\Models\Notification::TYPE_NEW_ORDER,
+                'إذن صرف جديد',
+                "تم إنشاء إذن صرف برقم {$voucher->voucher_number}",
+                [
+                    'voucher_id' => $voucher->id,
+                    'voucher_number' => $voucher->voucher_number,
+                    'customer_name' => $customerName,
+                    'total_amount' => $voucher->net_total,
+                    'branch_id' => $voucher->branch_id,
+                ],
+                "#sales/{$voucher->id}"
+            );
+        } catch (\Exception $e) {
+            // Log error but don't fail the voucher creation
+            \Log::error('Failed to send new order notification: ' . $e->getMessage());
+        }
     }
 }

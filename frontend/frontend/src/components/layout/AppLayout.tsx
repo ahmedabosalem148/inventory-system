@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { Sidebar } from './Sidebar'
 import { Navbar } from './Navbar'
-import { Breadcrumbs, useBreadcrumbs } from '@/components/Breadcrumbs'
+import { Breadcrumbs } from '@/components/Breadcrumbs'
+import { useBreadcrumbs } from '@/components/BreadcrumbsUtils'
 
 interface AppLayoutProps {
   children: ReactNode

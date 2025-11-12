@@ -3,6 +3,7 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { Button } from '@/components/ui/button'
 import { SearchInput } from '@/components/ui/search-input'
 import { Badge } from '@/components/ui/badge'
+import { NotificationBell } from '@/components/NotificationBell'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -13,7 +14,6 @@ import {
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import {
   Menu,
-  Bell,
   User,
   Settings,
   LogOut,
@@ -36,9 +36,6 @@ export function Navbar({ onMenuClick }: NavbarProps) {
       logout()
     }
   }
-
-  // Mock notifications count
-  const notificationsCount = 3
 
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
@@ -85,58 +82,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           </div>
 
           {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="w-5 h-5" />
-                {notificationsCount > 0 && (
-                  <Badge
-                    variant="danger"
-                    className="absolute -top-1 -left-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                  >
-                    {notificationsCount}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <div className="p-4 border-b">
-                <h3 className="font-semibold">الإشعارات</h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  لديك {notificationsCount} إشعارات جديدة
-                </p>
-              </div>
-              <div className="max-h-96 overflow-y-auto">
-                {/* Notification Items */}
-                <div className="p-3 hover:bg-gray-50 cursor-pointer border-b">
-                  <p className="text-sm font-medium">منتج على وشك النفاد</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    لمبة LED 10W - المخزون: 5 قطع
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">منذ ساعتين</p>
-                </div>
-                <div className="p-3 hover:bg-gray-50 cursor-pointer border-b">
-                  <p className="text-sm font-medium">فاتورة جديدة</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    فاتورة صرف #1523 - محمد أحمد
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">منذ 3 ساعات</p>
-                </div>
-                <div className="p-3 hover:bg-gray-50 cursor-pointer">
-                  <p className="text-sm font-medium">دفعة مستحقة</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    أحمد علي - 5,000 جنيه
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">منذ 5 ساعات</p>
-                </div>
-              </div>
-              <div className="p-2 border-t">
-                <Button variant="ghost" size="sm" className="w-full">
-                  عرض كل الإشعارات
-                </Button>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <NotificationBell />
 
           {/* User Menu */}
           <DropdownMenu>

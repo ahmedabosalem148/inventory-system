@@ -194,8 +194,50 @@ class InventoryService
             ]
         );
 
-        $productBranch->current_stock += $change;
+        $newStock = $productBranch->current_stock + $change;
+        $productBranch->current_stock = $newStock;
         $productBranch->save();
+
+        // Check if stock dropped below minimum and send notification
+        if ($change < 0) { // Only when stock decreases
+            $product = Product::find($productId);
+            if ($product && $newStock <= $productBranch->min_qty && $productBranch->min_qty > 0) {
+                $this->sendLowStockNotification($product, $productBranch);
+            }
+        }
+    }
+
+    /**
+     * Send low stock notification to admins and managers
+     *
+     * @param Product $product
+     * @param ProductBranch $productBranch
+     * @return void
+     */
+    protected function sendLowStockNotification(Product $product, ProductBranch $productBranch): void
+    {
+        try {
+            $notificationService = new \App\Services\NotificationService();
+            
+            // Send to managers only (accounting is the admin role in this system)
+            $notificationService->sendToRole(
+                'manager',
+                \App\Models\Notification::TYPE_LOW_STOCK,
+                'تنبيه مخزون منخفض',
+                "منتج \"{$product->name}\" وصل لأقل من الحد الأدنى للمخزون ({$productBranch->current_stock} وحدة متبقية)",
+                [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'branch_id' => $productBranch->branch_id,
+                    'current_stock' => $productBranch->current_stock,
+                    'min_qty' => $productBranch->min_qty,
+                ],
+                '#products'
+            );
+        } catch (\Exception $e) {
+            // Log error but don't fail the stock update
+            \Log::error('Failed to send low stock notification: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -364,17 +406,19 @@ class InventoryService
         $stocks = $query->get();
         
         $totalProducts = $stocks->count();
+        $totalQuantity = $stocks->sum('current_stock');
         $lowStockCount = $stocks->filter(fn($stock) => $stock->is_low_stock)->count();
         $outOfStockCount = $stocks->filter(fn($stock) => $stock->current_stock <= 0)->count();
         $totalValue = $stocks->sum(function($stock) {
-            return $stock->current_stock * $stock->product->purchase_price;
+            return $stock->current_stock * ($stock->product->purchase_price ?? 0);
         });
 
         return [
-            'total_products' => $totalProducts,
+            'total_items' => $totalProducts,
+            'total_quantity' => $totalQuantity,
+            'total_value' => $totalValue,
             'low_stock_count' => $lowStockCount,
             'out_of_stock_count' => $outOfStockCount,
-            'total_inventory_value' => $totalValue,
             'low_stock_percentage' => $totalProducts > 0 ? round(($lowStockCount / $totalProducts) * 100, 2) : 0,
         ];
     }

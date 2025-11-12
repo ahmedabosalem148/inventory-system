@@ -27,28 +27,11 @@ class InventoryMovementController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-        
         $query = InventoryMovement::with(['product', 'branch']);
 
-        // فلترة حسب الفرع (مع التحقق من الصلاحيات)
+        // فلترة حسب الفرع
         if ($request->filled('branch_id')) {
-            $branchId = $request->branch_id;
-            
-            // التحقق من صلاحية المستخدم على هذا الفرع
-            if (!$user->hasRole('super-admin') && !$user->hasAccessToBranch($branchId)) {
-                return response()->json([
-                    'message' => 'ليس لديك صلاحية لعرض حركات هذا الفرع',
-                ], 403);
-            }
-            
-            $query->where('branch_id', $branchId);
-        } else {
-            // إذا لم يحدد فرع، اعرض فقط الفروع التي يملك صلاحية عليها
-            if (!$user->hasRole('super-admin')) {
-                $allowedBranches = $user->getAccessibleBranches()->pluck('id');
-                $query->whereIn('branch_id', $allowedBranches);
-            }
+            $query->where('branch_id', $request->branch_id);
         }
 
         // فلترة حسب المنتج
@@ -340,21 +323,12 @@ class InventoryMovementController extends Controller
     /**
      * تقرير ملخص المخزون
      * 
-     * GET /api/v1/inventory-movements/summary
+     * GET /api/v1/inventory-movements/reports/summary
      */
     public function summary(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $branchId = $request->branch_id;
-        
-        // التحقق من الصلاحية إذا تم تحديد فرع
-        if ($branchId && !$user->hasRole('super-admin') && !$user->hasAccessToBranch($branchId)) {
-            return response()->json([
-                'message' => 'ليس لديك صلاحية لعرض تقرير هذا الفرع',
-            ], 403);
-        }
-
         try {
+            $branchId = $request->branch_id;
             $summary = $this->inventoryService->getInventorySummary($branchId);
             
             return response()->json([
@@ -362,6 +336,7 @@ class InventoryMovementController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Error in inventory summary: ' . $e->getMessage());
             return response()->json([
                 'message' => 'خطأ في إنشاء التقرير',
                 'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
@@ -372,31 +347,22 @@ class InventoryMovementController extends Controller
     /**
      * قائمة المنتجات المنخفضة المخزون
      * 
-     * GET /api/v1/inventory-movements/low-stock
+     * GET /api/v1/inventory-movements/reports/low-stock
      */
     public function lowStock(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $branchId = $request->branch_id;
-        
-        // التحقق من الصلاحية إذا تم تحديد فرع
-        if ($branchId && !$user->hasRole('super-admin') && !$user->hasAccessToBranch($branchId)) {
-            return response()->json([
-                'message' => 'ليس لديك صلاحية لعرض مخزون هذا الفرع',
-            ], 403);
-        }
-
         try {
+            $branchId = $request->branch_id;
+            
             if ($branchId) {
+                // فرع محدد
                 $lowStockProducts = $this->inventoryService->getProductsBelowMinQuantity($branchId);
             } else {
-                // إذا لم يحدد فرع، اجمع من كل الفروع التي يملك صلاحية عليها
-                $accessibleBranches = $user->hasRole('super-admin') 
-                    ? \App\Models\Branch::all() 
-                    : $user->getAccessibleBranches();
-                
+                // كل الفروع
+                $branches = \App\Models\Branch::all();
                 $lowStockProducts = collect();
-                foreach ($accessibleBranches as $branch) {
+                
+                foreach ($branches as $branch) {
                     $branchLowStock = $this->inventoryService->getProductsBelowMinQuantity($branch->id);
                     $lowStockProducts = $lowStockProducts->merge($branchLowStock);
                 }
@@ -408,6 +374,7 @@ class InventoryMovementController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Error in low stock report: ' . $e->getMessage());
             return response()->json([
                 'message' => 'خطأ في استرجاع بيانات المخزون المنخفض',
                 'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',

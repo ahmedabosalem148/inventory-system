@@ -93,6 +93,9 @@ class UserController extends Controller
 
             DB::commit();
 
+            // Send notification for new user
+            $this->sendNewUserNotification($user, $validated['role']);
+
             return response()->json([
                 'message' => 'تم إضافة المستخدم بنجاح',
                 'data' => [
@@ -316,5 +319,36 @@ class UserController extends Controller
             'store_user' => 'مستخدم مخزن',
             default => $role,
         };
+    }
+
+    /**
+     * Send new user notification to admins
+     */
+    private function sendNewUserNotification(User $user, string $role): void
+    {
+        try {
+            $notificationService = new \App\Services\NotificationService();
+            
+            $roleLabel = $this->getRoleLabel($role);
+            
+            // Send to managers only
+            $notificationService->sendToRole(
+                'manager',
+                \App\Models\Notification::TYPE_USER_CREATED,
+                'مستخدم جديد',
+                "تم إضافة مستخدم جديد: {$user->name} بصلاحية {$roleLabel}",
+                [
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'user_email' => $user->email,
+                    'role' => $role,
+                    'role_label' => $roleLabel,
+                ],
+                '#users'
+            );
+        } catch (\Exception $e) {
+            // Log error but don't fail user creation
+            \Log::error('Failed to send new user notification: ' . $e->getMessage());
+        }
     }
 }

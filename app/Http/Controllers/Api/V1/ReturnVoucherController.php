@@ -161,6 +161,9 @@ class ReturnVoucherController extends Controller
 
             DB::commit();
 
+            // Send notification for new return voucher
+            $this->sendReturnVoucherNotification($voucher);
+
             return new ReturnVoucherResource($voucher->load(['customer', 'branch', 'items.product']));
         } catch (\Exception $e) {
             DB::rollBack();
@@ -309,6 +312,55 @@ class ReturnVoucherController extends Controller
             return response()->json([
                 'message' => 'فشل إلغاء إذن المرتجع: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Send return voucher notification to admins and managers
+     */
+    private function sendReturnVoucherNotification(ReturnVoucher $voucher): void
+    {
+        try {
+            $notificationService = new \App\Services\NotificationService();
+            
+            $customerName = $voucher->customer_name ?? 'غير محدد';
+            $reason = $voucher->reason ?? 'غير محدد';
+            
+            // Send to managers and accounting
+            $notificationService->sendToRole(
+                'manager',
+                \App\Models\Notification::TYPE_RETURN_VOUCHER,
+                'فاتورة مرتجعات جديدة',
+                "تم إنشاء فاتورة مرتجعات برقم {$voucher->voucher_number} - السبب: {$reason}",
+                [
+                    'voucher_id' => $voucher->id,
+                    'voucher_number' => $voucher->voucher_number,
+                    'customer_name' => $customerName,
+                    'total_amount' => $voucher->total_amount,
+                    'reason' => $reason,
+                    'branch_id' => $voucher->branch_id,
+                ],
+                "#returns/{$voucher->id}"
+            );
+
+            $notificationService->sendToRole(
+                'accounting',
+                \App\Models\Notification::TYPE_RETURN_VOUCHER,
+                'فاتورة مرتجعات جديدة',
+                "تم إنشاء فاتورة مرتجعات برقم {$voucher->voucher_number} - السبب: {$reason}",
+                [
+                    'voucher_id' => $voucher->id,
+                    'voucher_number' => $voucher->voucher_number,
+                    'customer_name' => $customerName,
+                    'total_amount' => $voucher->total_amount,
+                    'reason' => $reason,
+                    'branch_id' => $voucher->branch_id,
+                ],
+                "#returns/{$voucher->id}"
+            );
+        } catch (\Exception $e) {
+            // Log error but don't fail the voucher creation
+            \Log::error('Failed to send return voucher notification: ' . $e->getMessage());
         }
     }
 }
